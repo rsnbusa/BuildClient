@@ -18,6 +18,8 @@ uint8_t							tempb[10000],nada;
 
 static const char *TAG = "BDGCLIENT";
 
+//* change
+
 static EventGroupHandle_t wifi_event_group;
 const static int WIFI_BIT = BIT0;
 //change new again
