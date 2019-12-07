@@ -11,7 +11,7 @@ sleep_modes.o: /Users/rsn/esp/esp-idf/components/esp32/sleep_modes.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/endian.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/param.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp32/include/esp_sleep.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -148,7 +148,7 @@ sleep_modes.o: /Users/rsn/esp/esp-idf/components/esp32/sleep_modes.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp32/include/esp_sleep.h:
 

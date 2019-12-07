@@ -28,7 +28,7 @@ src/pm_locks.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/esp32/include/esp32/pm.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc.h \
@@ -132,7 +132,7 @@ src/pm_locks.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

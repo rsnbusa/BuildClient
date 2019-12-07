@@ -24,7 +24,7 @@ src/hal/spi_flash_hal_iram.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_assert.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/periph_defs.h \
@@ -104,7 +104,7 @@ src/hal/spi_flash_hal_iram.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

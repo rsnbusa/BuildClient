@@ -29,7 +29,7 @@ port/os_xtensa.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/time.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/time.h \
@@ -109,7 +109,7 @@ port/os_xtensa.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

@@ -1,6 +1,6 @@
 spi_flash_os_func_noos.o: \
  /Users/rsn/esp/esp-idf/components/spi_flash/spi_flash_os_func_noos.c \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_flash.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -51,7 +51,7 @@ spi_flash_os_func_noos.o: \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/xtruntime-core-state.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/xtruntime-frames.h
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_flash.h:
 

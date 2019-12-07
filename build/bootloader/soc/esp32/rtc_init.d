@@ -14,7 +14,7 @@ esp32/rtc_init.o: /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_init.c \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/dport_reg.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/dport_access.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp32/include/esp32/dport_access.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_reg.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/xtruntime.h \
@@ -65,7 +65,7 @@ esp32/rtc_init.o: /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_init.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp32/include/esp32/dport_access.h:
 

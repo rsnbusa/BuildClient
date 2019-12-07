@@ -16,7 +16,7 @@ periph_ctrl.o: /Users/rsn/esp/esp-idf/components/driver/periph_ctrl.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/lock.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -105,7 +105,7 @@ periph_ctrl.o: /Users/rsn/esp/esp-idf/components/driver/periph_ctrl.c \
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

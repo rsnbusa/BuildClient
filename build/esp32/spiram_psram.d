@@ -1,5 +1,5 @@
 spiram_psram.o: /Users/rsn/esp/esp-idf/components/esp32/spiram_psram.c \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/newlib.h \
@@ -87,7 +87,7 @@ spiram_psram.o: /Users/rsn/esp/esp-idf/components/esp32/spiram_psram.c \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_image_format.h \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_app_format.h
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/string.h:
 

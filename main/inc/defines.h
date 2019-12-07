@@ -17,9 +17,10 @@
 #define FCS								5
 
 #define MAXCHARS						40
-#define MAXDEVS							1
+#define MAXDEVS							4
 #define TEST
 
 #define CENTINEL            			0x12112299  //our chip id
 
+#define LOCALTIME	"GMT+5"
 #endif

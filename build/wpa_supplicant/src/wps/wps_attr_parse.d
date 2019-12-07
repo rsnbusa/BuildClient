@@ -2,7 +2,7 @@ src/wps/wps_attr_parse.o: \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/wps/wps_attr_parse.c \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/utils/includes.h \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/port/include/supplicant_opt.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -58,7 +58,7 @@ src/wps/wps_attr_parse.o: \
 
 /Users/rsn/esp/esp-idf/components/wpa_supplicant/port/include/supplicant_opt.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

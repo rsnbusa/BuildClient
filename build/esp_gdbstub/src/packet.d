@@ -17,7 +17,7 @@ src/packet.o: /Users/rsn/esp/esp-idf/components/esp_gdbstub/src/packet.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/xtensa/config/core-isa.h \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core-matmap.h \
  /Users/rsn/esp/esp-idf/components/esp_gdbstub/esp32/gdbstub_target_config.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h
 
 /Users/rsn/esp/esp-idf/components/esp_gdbstub/private_include/esp_gdbstub_common.h:
 
@@ -55,5 +55,5 @@ src/packet.o: /Users/rsn/esp/esp-idf/components/esp_gdbstub/src/packet.c \
 
 /Users/rsn/esp/esp-idf/components/esp_gdbstub/esp32/gdbstub_target_config.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 /Users/rsn/esp/esp-idf/components/esp_gdbstub/src/packet.c:

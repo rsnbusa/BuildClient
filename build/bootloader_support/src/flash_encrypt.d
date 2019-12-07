@@ -16,7 +16,7 @@ src/flash_encrypt.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
@@ -76,7 +76,7 @@ src/flash_encrypt.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
 

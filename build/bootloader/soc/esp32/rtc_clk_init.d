@@ -1,7 +1,7 @@
 esp32/rtc_clk_init.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_clk_init.c \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/rtc.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
@@ -47,7 +47,7 @@ esp32/rtc_clk_init.o: \
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/rtc.h:
 

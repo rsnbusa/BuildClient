@@ -18,7 +18,7 @@ random.o: /Users/rsn/esp/esp-idf/components/newlib/random.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/endian.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/param.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/reent.h \
@@ -82,7 +82,7 @@ random.o: /Users/rsn/esp/esp-idf/components/newlib/random.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h:
 

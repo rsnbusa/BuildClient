@@ -20,7 +20,7 @@ port/freertos/ffsystem.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
  /Users/rsn/esp/esp-idf/components/fatfs/src/ff.h \
  /Users/rsn/esp/esp-idf/components/fatfs/src/ffconf.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/param.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/syslimits.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/endian.h \
@@ -109,7 +109,7 @@ port/freertos/ffsystem.o: \
 
 /Users/rsn/esp/esp-idf/components/fatfs/src/ffconf.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/param.h:
 

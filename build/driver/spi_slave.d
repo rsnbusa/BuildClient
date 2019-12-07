@@ -14,7 +14,7 @@ spi_slave.o: /Users/rsn/esp/esp-idf/components/driver/spi_slave.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/lock.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/hal/spi_ll.h \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/hal_defs.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
@@ -136,7 +136,7 @@ spi_slave.o: /Users/rsn/esp/esp-idf/components/driver/spi_slave.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/hal/spi_ll.h:
 

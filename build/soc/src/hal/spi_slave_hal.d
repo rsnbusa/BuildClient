@@ -2,7 +2,7 @@ src/hal/spi_slave_hal.o: \
  /Users/rsn/esp/esp-idf/components/soc/src/hal/spi_slave_hal.c \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_slave_hal.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -48,7 +48,7 @@ src/hal/spi_slave_hal.o: \
 
 /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h:
 

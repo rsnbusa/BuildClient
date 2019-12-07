@@ -1,7 +1,7 @@
 src/eap_peer/eap_mschapv2.o: \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/rsn_supp/wpa.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -67,7 +67,7 @@ src/eap_peer/eap_mschapv2.o: \
 
 /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/rsn_supp/wpa.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

@@ -1,6 +1,6 @@
 buildClientFram.o: \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/main/buildClientFram.cpp \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/main/inc/includes.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/buildClientFram.cpp \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/includes.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/newlib.h \
@@ -26,7 +26,7 @@ buildClientFram.o: \
  /Users/rsn/esp/esp-idf/components/esp_wifi/include/esp_wifi.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
@@ -189,7 +189,7 @@ buildClientFram.o: \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/json/cJSON/cJSON.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/main/HW/framSPI.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framSPI.h \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_common.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
@@ -200,11 +200,11 @@ buildClientFram.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/main/HW/framDef.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/main/inc/defines.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/main/inc/projStruct.h
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framDef.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/projStruct.h
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/main/inc/includes.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/includes.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h:
 
@@ -256,7 +256,7 @@ buildClientFram.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h:
 
@@ -582,7 +582,7 @@ buildClientFram.o: \
 
 /Users/rsn/esp/esp-idf/components/json/cJSON/cJSON.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/main/HW/framSPI.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framSPI.h:
 
 /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h:
 
@@ -604,9 +604,9 @@ buildClientFram.o: \
 
 /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/main/HW/framDef.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framDef.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/main/inc/defines.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/main/inc/projStruct.h:
-/Users/rsn/Desktop/examples/emitter-buildcltfram/main/./buildClientFram.cpp:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/projStruct.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/./buildClientFram.cpp:

@@ -14,7 +14,7 @@ esp32/emac_hal.o: /Users/rsn/esp/esp-idf/components/soc/esp32/emac_hal.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/lock.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/gpio_periph.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -81,7 +81,7 @@ esp32/emac_hal.o: /Users/rsn/esp/esp-idf/components/soc/esp32/emac_hal.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 

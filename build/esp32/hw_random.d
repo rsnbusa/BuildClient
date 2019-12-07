@@ -21,7 +21,7 @@ hw_random.o: /Users/rsn/esp/esp-idf/components/esp32/hw_random.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/endian.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/param.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp32/include/esp32/clk.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/wdev_reg.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
@@ -90,7 +90,7 @@ hw_random.o: /Users/rsn/esp/esp-idf/components/esp32/hw_random.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp32/include/esp32/clk.h:
 

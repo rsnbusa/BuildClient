@@ -1,5 +1,5 @@
 debug_helpers.o: /Users/rsn/esp/esp-idf/components/xtensa/debug_helpers.c \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -42,7 +42,7 @@ debug_helpers.o: /Users/rsn/esp/esp-idf/components/xtensa/debug_helpers.c \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/tie.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h:
 

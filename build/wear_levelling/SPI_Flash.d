@@ -5,7 +5,7 @@ SPI_Flash.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/features.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/ieeefp.h \
@@ -44,7 +44,7 @@ SPI_Flash.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

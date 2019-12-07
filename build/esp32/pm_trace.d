@@ -1,6 +1,6 @@
 pm_trace.o: /Users/rsn/esp/esp-idf/components/esp32/pm_trace.c \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_private/pm_trace.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/gpio.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -54,7 +54,7 @@ pm_trace.o: /Users/rsn/esp/esp-idf/components/esp32/pm_trace.c \
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_private/pm_trace.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/driver/include/driver/gpio.h:
 

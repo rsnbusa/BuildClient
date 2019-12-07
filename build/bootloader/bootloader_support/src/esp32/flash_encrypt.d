@@ -3,7 +3,7 @@ src/esp32/flash_encrypt.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include_bootloader/bootloader_flash.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_spi_flash.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_image_format.h \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_flash_partitions.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
@@ -52,7 +52,7 @@ src/esp32/flash_encrypt.o: \
 
 /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_spi_flash.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_image_format.h:
 

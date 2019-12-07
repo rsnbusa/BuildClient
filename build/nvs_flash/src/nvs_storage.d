@@ -4,7 +4,7 @@ src/nvs_storage.o: \
  /Users/rsn/esp/esp-idf/components/nvs_flash/src/nvs.hpp \
  /Users/rsn/esp/esp-idf/components/nvs_flash/include/nvs.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h \
@@ -32,7 +32,7 @@ src/nvs_storage.o: \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h:
 

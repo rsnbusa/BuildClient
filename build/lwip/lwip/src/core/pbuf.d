@@ -35,7 +35,7 @@ lwip/src/core/pbuf.o: \
  /Users/rsn/esp/esp-idf/components/vfs/include/sys/ioctl.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/select.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_task.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
@@ -198,7 +198,7 @@ lwip/src/core/pbuf.o: \
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_task.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 

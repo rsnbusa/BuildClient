@@ -2,19 +2,21 @@
 
 config_flash					theConf;
 QueueHandle_t 					mqttQ,mqttR;
-SemaphoreHandle_t 				wifiSem,framSem,connSem;
+SemaphoreHandle_t 				wifiSem,framSem;
 char							deb;
-u32								sentTotal=0,sendTcp=0,framWords=0;
+u32								sentTotal=0,sendTcp=0;
 u8								qwait=0;
 u16 							qdelay,addressBytes;
 u16								mesg,diag,horag,yearg;
-meterType						theMeters,algo;
+meterType						theMeters;
 gpio_config_t 					io_conf;
 cmdType							theCmd;
-u16                  			diaTarifa[24],yearDay;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
+u16                  			diaHoraTarifa,yearDay;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
 nvs_handle 						nvshandle;
 FramSPI							fram;
-uint8_t							tempb[10000],nada;
+uint8_t							tempb[10000];
+uint8_t 						daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
+char							theMac[20],them[6];
 
 static const char *TAG = "BDGCLIENT";
 
@@ -52,6 +54,8 @@ void gpio_isr_handler(void * arg)
 	u32 fueron;
 	meterType *meter=(meterType*)arg;
 
+	if(meter->beatsPerkW==0)
+		meter->beatsPerkW=800;
 
 	uint8_t como=gpio_get_level(meter->pin);
 	if(deb)
@@ -80,13 +84,18 @@ void gpio_isr_handler(void * arg)
 				 meter->beatSave++;
 				 meter->beatSaveRaw++;
 				 meter->currentBeat++;
-				if((meter->currentBeat % 80)==0) //every GMAXLOSSPER interval
+				if((meter->currentBeat % (meter->beatsPerkW/10))==0) //every GMAXLOSSPER interval
 				{
-					if(meter->beatSaveRaw>=800)
+					meter->saveit=false;
+
+			//		if(meter->beatSave>=(meter->beatsPerkW*diaTarifa[horag]/100))
+
+					if(meter->beatSaveRaw >= meter->beatsPerkW*diaHoraTarifa/100)
 					{
 						meter->beatSaveRaw=0;
-						meter->curLife++;
+						//meter->curLife++;
 						meter->beatSave=0;
+						meter->saveit=true;
 					}
 			//		meter->startConn=millisISR();
 
@@ -106,7 +115,6 @@ void gpio_isr_handler(void * arg)
 void install_meter_interrupts()
 {
 	char 	temp[30];
-	memset(&theMeters,0,sizeof(theMeters));
 	u8 mac[6];
 	theMeters.pin=4;
 
@@ -239,19 +247,31 @@ static void recover_fram()
 }
 
 
-static void write_to_fram(u8 meter,bool adding)
+static void write_to_fram(u8 meter,bool addit)
 {
+	time_t timeH;
+    struct tm timeinfo;
+
 	// FRAM Semaphore is taken by the Interrupt Manager. Safe to work.
 	scratchTypespi scratch;
-
+    time(&timeH);
+	localtime_r(&timeH, &timeinfo);
+	mesg=timeinfo.tm_mon;
+	diag=timeinfo.tm_mday-1;
+	yearg=timeinfo.tm_year+1900;
+	horag=timeinfo.tm_hour-1;
 //	if(aqui.traceflag & (1<<BEATD)) //Should not print. semaphore is taking longer
-//			printf("[BEATD]Save KWH Meter %d Month %d Day %d Hour %d Year %d lifekWh %d\n",meter,mesg,diag,horag,yearg,theMeters.curLife+1);
-	theMeters.curLife++;
-	theMeters.curMonth++;
-	theMeters.curDay++;
-	theMeters.curHour++;
-	theMeters.curCycle++;
-	time(&theMeters.lastKwHDate); //last time we saved data
+	//		printf("[BEATD]Save KWH Meter %d Month %d Day %d Hour %d Year %d lifekWh %d beats %d addkw %d\n",meter,mesg,diag,horag,yearg,
+	//					theMeters.curLife,theMeters.currentBeat,addit);
+			if(addit)
+			{
+				theMeters.curLife++;
+				theMeters.curMonth++;
+				theMeters.curDay++;
+				theMeters.curHour++;
+				theMeters.curCycle++;
+				time(&theMeters.lastKwHDate); //last time we saved data
+
 
 	scratch.medidor.state=1;                    //scratch written state. Must be 0 to be ok. Every 800-1000 beats so its worth it
 	scratch.medidor.meter=meter;
@@ -275,15 +295,13 @@ static void write_to_fram(u8 meter,bool adding)
 	fram.write_hour(meter,yearg,mesg,diag,horag,theMeters.curHour);
 	fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters.curHourRaw);
 	fram.write_cycle(meter, mesg,theMeters.curCycle);
-//	fram.write_cycle(meter, theMeters.cycleMonth,theMeters.curCycle);
 	fram.write_minamps(meter,theMeters.minamps);
 	fram.write_maxamps(meter,theMeters.maxamps);
 	fram.write_lifedate(meter,theMeters.lastKwHDate);  //should be down after scratch record???
-//	scratch.medidor.state=2;            //variables written state
-//	FramSPI_write_recover(scratch);
-
 	fram.write8(SCRATCHOFF,0); //Fast write first byte of Scratch record to 0=done.
-
+			}
+			else
+			fram.write_beat(meter,theMeters.currentBeat);
 //	scratch.medidor.state=0;            // done state. OK
 //	FramSPI_write_recover(scratch);
 }
@@ -312,27 +330,26 @@ static void load_from_fram(u8 meter)
 		fram.read_maxamps(meter,(u8*)&theMeters.maxamps);
 		xSemaphoreGive(framSem);
 
-//		if(aqui.traceflag & (1<<BEATD))
-//			printf("[BEATD]Loaded Meter %d curLife %d\n",meter,theMeters.curLife);
+			printf("[BEATD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters.curLife,theMeters.currentBeat);
 	}
 }
 
-static void loadDayBPK(u16 hoy)
-{
-	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS)){
-		fram.read_tarif_day(hoy, (u8*)&diaTarifa); // all 24 hours of todays Tariff Types [0..255] of TarifaBPW
-		xSemaphoreGive(framSem);
-	}
-	else
-		return;
-//	if(aqui.traceflag & (1<<BOOTD))
-//	{
-//		for (int a=0;a<24;a++)
-//			printf("[BOOTD]H[%d]=%d ",a,diaTarifa[a]);
-//		printf("\n");
-//
+//static void loadDayBPK(u16 hoy)
+//{
+//	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS)){
+//		fram.read_tarif_day(hoy, (u8*)&diaTarifa); // all 24 hours of todays Tariff Types [0..255] of TarifaBPW
+//		xSemaphoreGive(framSem);
 //	}
-}
+//	else
+//		return;
+////	if(aqui.traceflag & (1<<BOOTD))
+////	{
+////		for (int a=0;a<24;a++)
+////			printf("[BOOTD]H[%d]=%d ",a,diaTarifa[a]);
+////		printf("\n");
+////
+////	}
+//}
 
 static void init_fram()
 {
@@ -368,12 +385,12 @@ static void init_fram()
 //			fram.read_tarif_bytes(0, (u8*)&tarifaBPK, sizeof(tarifaBPK)); // read all 100 types of BPK
 //			xSemaphoreGive(framSem);
 //		}
-
-		if(fram.intframWords>32768)
-		{
-			//	printf("Call load day \n");
-			loadDayBPK(yearDay);
-		}
+//
+//		if(fram.intframWords>32768)
+//		{
+//			//	printf("Call load day \n");
+//			loadDayBPK(yearDay);
+//		}
 
 }
 
@@ -403,28 +420,60 @@ static void wifi_init(void)
     esp_wifi_start();
 }
 
-void sendMsg(char * message)
+void updateDateTime(loginT loginData)
+{
+    struct tm timeinfo;
+
+	localtime_r(&loginData.thedate, &timeinfo);
+	diaHoraTarifa=loginData.theTariff;// Host will give us Hourly Tariff. No need to store
+
+	mesg=timeinfo.tm_mon;
+	diag=timeinfo.tm_mday;
+	yearg=timeinfo.tm_year+1900;
+	horag=timeinfo.tm_hour;
+	struct timeval now = { .tv_sec = loginData.thedate, .tv_usec=0};
+	settimeofday(&now, NULL);
+}
+
+
+u16_t sendMsg(char * message, uint8_t *donde)
 {
     struct netconn *conn = netconn_new(NETCONN_TCP);
     ip_addr_t remote;
     int waitTime;
+	struct netbuf *inbuf;
+	uint8_t *buf;
+	u16_t buflen;
+    loginT loginData;
+    char strftime_buf[64];
+    struct tm timeinfo;
+	u8 aca[4];
+	tcpip_adapter_ip_info_t ip_info;
 
-    IP_ADDR4( &remote, 192,168,4,1);
-    do
-    	{
-    	waitTime=rand() % 600;
-    	} while (waitTime<200);
+        do
+        {
+        	waitTime=rand() % 600;
+        	} while (waitTime<200);
 
-    if(esp_wifi_connect()==ESP_OK)
-    {
+        delay(waitTime);
 
-    	EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS);
+        if(esp_wifi_connect()==ESP_OK)
+        {
 
-    		if ((uxBits & WIFI_BIT)!=WIFI_BIT)
-    		{
-    		//	printf("Failed wait\n");// wait for connection
-    			return;
-      		}
+        	EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS);
+
+        		if ((uxBits & WIFI_BIT)!=WIFI_BIT)
+        		{
+        		//	printf("Failed wait\n");// wait for connection
+        			return;
+          		}
+
+    		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+    //    		printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+    //    		printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+    //    		printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
+    	memcpy(&aca,&ip_info.gw,4);
+    	IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
 
 		err_t err = netconn_connect(conn, &remote, BDGHOSTPORT);
 		if (err != ERR_OK) {
@@ -432,93 +481,75 @@ void sendMsg(char * message)
 		  return;
 		}
 
-		tcp_nagle_disable(conn->pcb.tcp); /* HACK */
+		tcp_nagle_disable(conn->pcb.tcp);
 		netconn_write(conn, message, strlen(message), NETCONN_NOCOPY);
-	    delay(waitTime);
+
+		buflen=0;
+		netconn_set_recvtimeout(conn, 200);
+		err = netconn_recv(conn, &inbuf);
+		if (err == ERR_OK) {
+
+				netbuf_data(inbuf, (void**)&buf, &buflen);
+				memcpy(donde,buf,buflen);
+				netbuf_delete(inbuf);
+		}
+		else
+			printf("Error netconn recv %d\n",err);
+
 		netconn_close(conn);
 		netconn_delete(conn);
 		esp_wifi_disconnect();
       }
     else
     	printf("Could not esp_connect\n");
+        return buflen;
 
 }
-/*
-static void host_publish(char * message)
+
+
+void logIn()
 {
-    char addr_str[128];
-    int addr_family;
-    int ip_protocol,err,retries;
+    loginT loginData;
 
-    if(esp_wifi_connect()==ESP_OK)
-    {
-        retries=0;
-    	xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, portMAX_DELAY/  portTICK_RATE_MS);// wait for connection
+	setenv("TZ", LOCALTIME, 1);
+	tzset();
 
-        struct sockaddr_in dest_addr;
-        dest_addr.sin_addr.s_addr = inet_addr(BDGHOSTADDR);
-        dest_addr.sin_family = AF_INET;
-        dest_addr.sin_port = htons(BDGHOSTPORT);
-        addr_family = AF_INET;
-        ip_protocol = IPPROTO_IP;
-        inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+	cJSON *root=cJSON_CreateObject();
+	cJSON *cmdJ=cJSON_CreateObject();
+	cJSON *ar = cJSON_CreateArray();
 
-        int sock =  socket(addr_family, SOCK_STREAM, ip_protocol);
-		if (sock < 0) {
-			 ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-		//	 esp_wifi_stop();
-			 esp_wifi_disconnect();
-			 return;
-		 }
-	//	ESP_LOGI(TAG, "Socket created, connecting to host");
+	if(root==NULL)
+	{
+		printf("cannot create root\n");
+		return;
+	}
 
-		while(1)
-		{
-			err = connect(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-			if (err != 0) {
-				if( ++retries<5){
-					shutdown(sock, 2);
-					delay(1000);
-					printf("retry connect sock\n");
-				}
-				else
-				{
-				ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
-				shutdown(sock, 2);
-				close(sock);
-				esp_wifi_disconnect();
-				return;
-				}
-		 }
-			else
-				break;
-		}
-	//	ESP_LOGI(TAG, "Successfully connected");
 
-        err = send(sock, message, strlen(message), 0);
-          if (err < 0) {
-              ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-              shutdown(sock, 2);
-              close(sock);
- 			 esp_wifi_disconnect();
+	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+	cJSON_AddStringToObject(cmdJ,"password",		"zipo");
+	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_login");
 
-              return;
-          }
-  //		ESP_LOGI(TAG, "Successfully sent");
-       //   if(err>0)
-        //	  printf("Send %d\n")
-  		delay(sendTcp);
-        shutdown(sock, 2);
-        close(sock);
-		 esp_wifi_disconnect();
+	cJSON_AddItemToArray(ar, cmdJ);
+	cJSON_AddItemToObject(root, "Batch",ar);
 
-    }
-    else
-        ESP_LOGE(TAG, "Error occurred starting interface");
+	char *logMsg=cJSON_Print(root);
+
+	sendMsg(logMsg,(uint8_t*)&loginData);
+
+	updateDateTime(loginData);
+
+	if(deb)
+		printf("Login year %d month %d day %d hour %d Tariff %d\n",yearg,mesg,diag,horag,loginData.theTariff);
+
+	free(logMsg);
+	free(root);
 }
-*/
+
+
 void sendStatusMeter(meterType* meter)
 {
+    loginT 	loginData;
+    struct 	tm timeinfo;
 
 	cJSON *root=cJSON_CreateObject();
 
@@ -528,30 +559,43 @@ void sendStatusMeter(meterType* meter)
 		return;
 	}
 
-	cJSON_AddStringToObject(root,"MeterPin33",		meter->serialNumber);
-	cJSON_AddNumberToObject(root,"Transactions",	++meter->vanMqtt);
-	cJSON_AddNumberToObject(root,"KwH",				meter->curLife);
-	cJSON_AddNumberToObject(root,"Beats",			meter->currentBeat);
-	cJSON_AddNumberToObject(root,"Pulse",			meter->pulse);
+	cJSON *cmdJ=cJSON_CreateObject();
+	cJSON *ar = cJSON_CreateArray();
+
+	if(cmdJ==NULL || ar==NULL)
+	{
+		printf("cannot create aux cjson\n");
+		return;
+	}
+
+	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
+	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
+	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
+	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
+	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
+	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
+	cJSON_AddItemToArray(ar, cmdJ);
+
+	cJSON_AddItemToObject(root, "Batch",ar);
 
 	char *rendered=cJSON_Print(root);
+
 	if (deb)
-	{
 		printf("[MQTTD]Json %s\n",rendered);
-	}
+
 	printf("Sending message %d... ",++sentTotal);
 	fflush(stdout);
 
-	//if(xSemaphoreTake(wifiSem, portMAX_DELAY/  portTICK_RATE_MS))
-	//{
-	//	host_publish(rendered);
-		sendMsg(rendered);
-		printf("sent\n");
-	//	xSemaphoreGive(wifiSem);
-	//}
+	sendMsg(rendered,(uint8_t*)&loginData);
+	updateDateTime(loginData);
+
+	if(deb)
+		printf("SendMeterFram dates year %d month %d day %d hour %d Tariff %d\n",yearg,mesg,diag,horag,loginData.theTariff);
 
 	free(rendered);
 	cJSON_Delete(root);
+	printf("Tar %d sent Heap %d\n",loginData.theTariff,esp_get_free_heap_size());
 
 	}
 
@@ -638,11 +682,14 @@ static void mqttManager(void* arg)
 	{
 		if( xQueueReceive( mqttR, &meter, portMAX_DELAY/  portTICK_RATE_MS ))
 			{
-				printf("Meter %d Beat %d Pos %d Queue %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR));
+			//	printf("Meter %d Beat %d Pos %d Queue %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR));
+				write_to_fram(0,meter.saveit);
 				sendStatusMeter(&theMeters);
 			}
 		else
 			delay(100);
+
+
 	}
 
 }
@@ -708,11 +755,12 @@ void sender(void *pArg)
 
 
 	void kbd(void *arg) {
-		int len,reg,ic;
+		int len,ret,cualf,total;
 		uart_port_t uart_num = UART_NUM_0 ;
 		char s1[20];
 		char data[20];
-		u8 readReg,val;
+		u32 framAddress;
+		u8 fueron,valor;
 		u8 *p;
 
 
@@ -740,7 +788,7 @@ void sender(void *pArg)
 				{
 				case 'x':
 				case 'X':
-					printf("To dump core\n");
+					printf("Dumping core...\n");
 					p=0;
 					delay(2000);
 					*p=0;
@@ -755,9 +803,55 @@ void sender(void *pArg)
 						printf("\n");
 						break;
 					}
-					memset(&tempb,atoi(s1),sizeof(tempb));
-			//		FramSPI_format(atoi(s1),tempb,sizeof(tempb),true);
-					printf("Format started\n");
+					fram.format(atoi(s1),tempb,sizeof(tempb),true);
+					printf("Format done\n");
+					break;
+				case 'r':
+				case 'R':
+					printf("Read FRAM address:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+						break;
+					}
+					framAddress=atoi(s1);
+					printf("Count:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+						break;
+					}
+					fueron=atoi(s1);
+					fram.readMany(framAddress,tempb,fueron);
+					for (int a=0;a<fueron;a++)
+						printf("%02x-",tempb[a]);
+					printf("\n");
+					break;
+				case 'w':
+				case 'W':
+					printf("Write FRAM address:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+						break;
+					}
+					framAddress=atoi(s1);
+					printf("Value:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+						break;
+					}
+					fueron=atoi(s1);
+					fram.write8(framAddress,fueron);
 					break;
 				case 'q':
 				case 'Q':
@@ -827,6 +921,136 @@ void sender(void *pArg)
 							}
 						break;
 
+				case '5'://All days in Month
+					printf("Days in Month search\nMonth(0-11):");
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					len=atoi(s1);
+					if(len<0 || len>11){
+						printf("Invalid month\n");
+						break;
+					}
+					if(xSemaphoreTake(framSem, portMAX_DELAY))		{
+						for (int a=0;a<daysInMonth[len];a++)
+						{
+							fram.read_day(0,yearg,len, a, (u8*)&valor);
+							if(valor>0)
+								printf("M[%d]D[%d]=%d ",len,a,valor);
+						}
+						xSemaphoreGive(framSem);
+
+					}
+						printf("\n");
+							break;
+				case '4': //All Hours in Day
+					printf("Hours in Day search\nMonth(0-11):");
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					len=atoi(s1);
+					if(len<0 || len>11){
+						printf("Invalid month\n");
+						break;
+					}
+					printf("Day(0-%d):",daysInMonth[len]);
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					ret=atoi(s1);
+					if(ret<0 || ret>daysInMonth[len]){
+						printf("Invalid Day range\n");
+						break;
+					}
+					if(xSemaphoreTake(framSem, portMAX_DELAY))		{
+						for (int a=0;a<24;a++)
+						{
+							fram.read_hour(0, yearg,len, ret, a, (u8*)&valor);
+							if(valor>0)
+								printf("M[%d]D[%d]H[%d]=%d ",len,ret,a,valor);
+						}
+						xSemaphoreGive(framSem);
+
+					}
+						printf("\n");
+							break;
+				case '3': //Hour search
+					printf("Month-Day-Hour search\nMonth(0-11):");
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					len=atoi(s1);
+					if(len<0 || len>11){
+						printf("Invalid month\n");
+						break;
+					}
+					printf("Day(0-%d):",daysInMonth[len]);
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					ret=atoi(s1);
+					if(ret<0 || ret>daysInMonth[len]){
+						printf("Invalid Day range\n");
+						break;
+					}
+					printf("Hour(0-23):");
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					cualf=atoi(s1);
+					if(cualf<0 || cualf>23){
+						printf("Invalid Hour range\n");
+						break;
+					}
+					if(xSemaphoreTake(framSem, portMAX_DELAY))
+					{
+						fram.read_day(0, yearg,len, ret, (u8*)&valor);
+						xSemaphoreGive(framSem);
+						if(valor>0)
+							printf("Date %d/%d/%d=%d\n",yearg,len,ret,valor);
+					}
+							break;
+				case '2':
+					printf("Month-Day search\nMonth:");
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					len=atoi(s1);
+					if(len<0 || len>11){
+						printf("Invalid month\n");
+						break;
+					}
+					printf("Day:");
+					fflush(stdout);
+					get_string((uart_port_t)uart_num,10,s1);
+					ret=atoi(s1);
+					if(ret<0 || ret>daysInMonth[len]){
+						printf("Invalid day range\n");
+						break;
+					}
+
+					if(xSemaphoreTake(framSem, portMAX_DELAY))
+					{
+						fram.read_day(0, yearg,len, ret, (u8*)&valor);
+						xSemaphoreGive(framSem);
+						printf("Date %d/%d/%d=%d\n",yearg,len,ret,valor);
+					}
+							break;
+				case '1':
+					total=0;
+					printf("Months Readings\n");
+					if(xSemaphoreTake(framSem, portMAX_DELAY))		{
+						for (int a=0;a<12;a++)
+						{
+							fram.read_month(0, a, (u8*)&valor);
+							if(valor>0)
+								printf("M[%d]=%d ",a,valor);
+							total+=valor;
+						}
+						xSemaphoreGive(framSem);
+						printf("\nTotal %d\n",total);
+					}
+					break;
+				case '0':
+					printf("Flushing Fram...");
+					fflush(stdout);
+					write_to_fram(0,false);
+					printf("done\n");
+					break;
+
 				default:
 					break;
 				}
@@ -842,11 +1066,6 @@ void sender(void *pArg)
 		memset(&theConf,0,sizeof(theConf));
 		theConf.centinel=CENTINEL;
 		theConf.ssl=0;
-		memcpy(theConf.mqtt," ",1);//fixed mosquito server
-		theConf.mqttport=30000;
-		printf("Mqtt Erase %s\n",theConf.mqtt);
-		memcpy(theConf.domain,"feediot.co.nf",13);// mosquito server feediot.co.nf
-		theConf.domain[13]=0;
 		theConf.beatsPerKw[0]=800;//old way
 		theConf.bounce[0]=100;
 		//    fram.write_tarif_bpw(0, 800); // since everything is going to be 0, BPW[0]=800 HUMMMMMM????? SHould load Tariffs after this
@@ -904,12 +1123,12 @@ void app_main()
    mqttQ = xQueueCreate( 20, sizeof( meterType ) );
    if(!mqttQ)
 	   printf("Failed queue Tx\n");
-   printf("Submode Queue %x\n",(uint32_t)mqttQ);
 
 	mqttR = xQueueCreate( 20, sizeof( meterType ) );
 	if(!mqttR)
 		printf("Failed queue Rx\n");
-	printf("Meter Queue %x\n",(uint32_t)mqttR);
+
+	memset(&theMeters,0,sizeof(theMeters));
 
    wifi_init();
    init_fram();
@@ -924,4 +1143,10 @@ void app_main()
 	xTaskCreate(&kbd,"kbd",4096,NULL, 4, NULL);
 #endif
 
+//get time from host and set local time for any time related work
+	char them[6];
+
+	esp_efuse_mac_get_default(them);
+	sprintf(theMac,"%02x:%02x:%02x:%02x:%02x:%02x",them[0],them[1],them[2],them[3],them[4],them[5]);
+	logIn();
 }

@@ -1,7 +1,7 @@
 src/esp32/secure_boot.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/src/esp32/secure_boot.c \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
@@ -47,7 +47,7 @@ src/esp32/secure_boot.o: \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h:
 

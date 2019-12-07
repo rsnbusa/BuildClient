@@ -1,6 +1,6 @@
 esp32/esp_efuse_table.o: \
  /Users/rsn/esp/esp-idf/components/efuse/esp32/esp_efuse_table.c \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/efuse/include/esp_efuse.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -34,7 +34,7 @@ esp32/esp_efuse_table.o: \
  /Users/rsn/esp/esp-idf/components/efuse/include/esp32/esp_efuse.h \
  /Users/rsn/esp/esp-idf/components/efuse/esp32/include/esp_efuse_table.h
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/efuse/include/esp_efuse.h:
 

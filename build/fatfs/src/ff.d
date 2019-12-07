@@ -1,7 +1,7 @@
 src/ff.o: /Users/rsn/esp/esp-idf/components/fatfs/src/ff.c \
  /Users/rsn/esp/esp-idf/components/fatfs/src/ff.h \
  /Users/rsn/esp/esp-idf/components/fatfs/src/ffconf.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/param.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/config.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/ieeefp.h \
@@ -71,7 +71,7 @@ src/ff.o: /Users/rsn/esp/esp-idf/components/fatfs/src/ff.c \
 
 /Users/rsn/esp/esp-idf/components/fatfs/src/ffconf.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/param.h:
 

@@ -3,7 +3,7 @@ src/bootloader_flash.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include_bootloader/bootloader_flash.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_spi_flash.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
@@ -38,7 +38,7 @@ src/bootloader_flash.o: \
 
 /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_spi_flash.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
 

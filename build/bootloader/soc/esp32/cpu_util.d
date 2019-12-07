@@ -1,6 +1,6 @@
 esp32/cpu_util.o: /Users/rsn/esp/esp-idf/components/soc/esp32/cpu_util.c \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/cpu.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/corebits.h \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -23,7 +23,7 @@ esp32/cpu_util.o: /Users/rsn/esp/esp-idf/components/soc/esp32/cpu_util.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/cpu.h:
 

@@ -1,5 +1,5 @@
 stdatomic.o: /Users/rsn/esp/esp-idf/components/xtensa/stdatomic.c \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/reent.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
@@ -59,7 +59,7 @@ stdatomic.o: /Users/rsn/esp/esp-idf/components/xtensa/stdatomic.c \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_idf_version.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/portmacro.h
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 

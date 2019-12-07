@@ -19,7 +19,7 @@ esp-mqtt/lib/mqtt_msg.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
  /Users/rsn/esp/esp-idf/components/mqtt/esp-mqtt/lib/include/mqtt_msg.h \
  /Users/rsn/esp/esp-idf/components/mqtt/esp-mqtt/include/mqtt_config.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/mqtt/esp-mqtt/lib/include/platform.h \
  /Users/rsn/esp/esp-idf/components/mqtt/esp-mqtt/lib/include/platform_esp32_idf.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
@@ -166,7 +166,7 @@ esp-mqtt/lib/mqtt_msg.o: \
 
 /Users/rsn/esp/esp-idf/components/mqtt/esp-mqtt/include/mqtt_config.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/mqtt/esp-mqtt/lib/include/platform.h:
 

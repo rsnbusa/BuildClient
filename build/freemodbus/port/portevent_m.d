@@ -2,7 +2,7 @@ port/portevent_m.o: \
  /Users/rsn/esp/esp-idf/components/freemodbus/port/portevent_m.c \
  /Users/rsn/esp/esp-idf/components/freemodbus/modbus/include/mb_m.h \
  /Users/rsn/esp/esp-idf/components/freemodbus/modbus/include/mbconfig.h \
- /Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freemodbus/port/port.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/reent.h \
@@ -104,7 +104,7 @@ port/portevent_m.o: \
 
 /Users/rsn/esp/esp-idf/components/freemodbus/modbus/include/mbconfig.h:
 
-/Users/rsn/Desktop/examples/emitter-buildcltfram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freemodbus/port/port.h:
 
