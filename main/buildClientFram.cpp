@@ -8,13 +8,13 @@ u32								sentTotal=0,sendTcp=0;
 u8								qwait=0;
 u16 							qdelay,addressBytes;
 u16								mesg,diag,horag,yearg;
-meterType						theMeters;
+meterType						theMeters[MAXDEVS];
 gpio_config_t 					io_conf;
 cmdType							theCmd;
 u16                  			diaHoraTarifa,yearDay;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
 nvs_handle 						nvshandle;
 FramSPI							fram;
-uint8_t							tempb[10000];
+uint8_t							tempb[MAXBUFF];
 uint8_t 						daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
 char							theMac[20],them[6];
 
@@ -88,8 +88,6 @@ void gpio_isr_handler(void * arg)
 				{
 					meter->saveit=false;
 
-			//		if(meter->beatSave>=(meter->beatsPerkW*diaTarifa[horag]/100))
-
 					if(meter->beatSaveRaw >= meter->beatsPerkW*diaHoraTarifa/100)
 					{
 						meter->beatSaveRaw=0;
@@ -97,11 +95,10 @@ void gpio_isr_handler(void * arg)
 						meter->beatSave=0;
 						meter->saveit=true;
 					}
-			//		meter->startConn=millisISR();
 
 					if(mqttR)
 					{
-						xQueueSendFromISR( mqttR,&theMeters,&tasker );
+						xQueueSendFromISR( mqttR,&theMeters[meter->pos],&tasker );
 							if (tasker)
 									portYIELD_FROM_ISR();
 					}
@@ -115,8 +112,12 @@ void gpio_isr_handler(void * arg)
 void install_meter_interrupts()
 {
 	char 	temp[30];
-	u8 mac[6];
-	theMeters.pin=4;
+	u8 		mac[6];
+
+	theMeters[0].pin=METER1;
+	theMeters[1].pin=METER2;
+	theMeters[2].pin=METER3;
+	theMeters[3].pin=METER4;
 
 	esp_wifi_get_mac(ESP_IF_WIFI_STA, (u8*)&mac);
 	sprintf(temp,"MeterIoT%02x%02x",mac[4],mac[5]);
@@ -128,11 +129,14 @@ void install_meter_interrupts()
 	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
 	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
 
-	strcpy(theMeters.serialNumber,temp);
-	theMeters.pos=0;
-	io_conf.pin_bit_mask = (1ULL<<theMeters.pin);
-	gpio_config(&io_conf);
-	gpio_isr_handler_add((gpio_num_t)theMeters.pin, gpio_isr_handler, (void*)&theMeters);
+	for (int a=0;a<MAXDEVS;a++)
+	{
+		sprintf(theMeters[a].serialNumber,"MeterIoT%02x%02x/%d",mac[4],mac[5],a);
+		theMeters[a].pos=a;
+		io_conf.pin_bit_mask = (1ULL<<theMeters[a].pin);
+		gpio_config(&io_conf);
+		gpio_isr_handler_add((gpio_num_t)theMeters[a].pin, gpio_isr_handler, (void*)&theMeters[a]);
+	}
 
 	io_conf.mode = GPIO_MODE_OUTPUT;
 	io_conf.pull_down_en =GPIO_PULLDOWN_ENABLE;
@@ -265,43 +269,43 @@ static void write_to_fram(u8 meter,bool addit)
 	//					theMeters.curLife,theMeters.currentBeat,addit);
 			if(addit)
 			{
-				theMeters.curLife++;
-				theMeters.curMonth++;
-				theMeters.curDay++;
-				theMeters.curHour++;
-				theMeters.curCycle++;
-				time(&theMeters.lastKwHDate); //last time we saved data
+				theMeters[meter].curLife++;
+				theMeters[meter].curMonth++;
+				theMeters[meter].curDay++;
+				theMeters[meter].curHour++;
+				theMeters[meter].curCycle++;
+				time(&theMeters[meter].lastKwHDate); //last time we saved data
 
 
 	scratch.medidor.state=1;                    //scratch written state. Must be 0 to be ok. Every 800-1000 beats so its worth it
 	scratch.medidor.meter=meter;
-	scratch.medidor.month=theMeters.curMonth;
-	scratch.medidor.life=theMeters.curLife;
-	scratch.medidor.day=theMeters.curDay;
-	scratch.medidor.hora=theMeters.curHour;
-	scratch.medidor.cycle=theMeters.curCycle;
+	scratch.medidor.month=theMeters[meter].curMonth;
+	scratch.medidor.life=theMeters[meter].curLife;
+	scratch.medidor.day=theMeters[meter].curDay;
+	scratch.medidor.hora=theMeters[meter].curHour;
+	scratch.medidor.cycle=theMeters[meter].curCycle;
 	scratch.medidor.mesg=mesg;
 	scratch.medidor.diag=diag;
 	scratch.medidor.horag=horag;
 	scratch.medidor.yearg=yearg;
 	fram.write_recover(scratch);            //Power Failure recover register
 
-	fram.write_beat(meter,theMeters.currentBeat);
-	fram.write_lifekwh(meter,theMeters.curLife);
-	fram.write_month(meter,mesg,theMeters.curMonth);
-	fram.write_monthraw(meter,mesg,theMeters.curMonthRaw);
-	fram.write_day(meter,yearg,mesg,diag,theMeters.curDay);
-	fram.write_dayraw(meter,yearg,mesg,diag,theMeters.curDayRaw);
-	fram.write_hour(meter,yearg,mesg,diag,horag,theMeters.curHour);
-	fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters.curHourRaw);
-	fram.write_cycle(meter, mesg,theMeters.curCycle);
-	fram.write_minamps(meter,theMeters.minamps);
-	fram.write_maxamps(meter,theMeters.maxamps);
-	fram.write_lifedate(meter,theMeters.lastKwHDate);  //should be down after scratch record???
+	fram.write_beat(meter,theMeters[meter].currentBeat);
+	fram.write_lifekwh(meter,theMeters[meter].curLife);
+	fram.write_month(meter,mesg,theMeters[meter].curMonth);
+	fram.write_monthraw(meter,mesg,theMeters[meter].curMonthRaw);
+	fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
+	fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
+	fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
+	fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
+	fram.write_cycle(meter, mesg,theMeters[meter].curCycle);
+	fram.write_minamps(meter,theMeters[meter].minamps);
+	fram.write_maxamps(meter,theMeters[meter].maxamps);
+	fram.write_lifedate(meter,theMeters[meter].lastKwHDate);  //should be down after scratch record???
 	fram.write8(SCRATCHOFF,0); //Fast write first byte of Scratch record to 0=done.
 			}
 			else
-			fram.write_beat(meter,theMeters.currentBeat);
+			fram.write_beat(meter,theMeters[meter].currentBeat);
 //	scratch.medidor.state=0;            // done state. OK
 //	FramSPI_write_recover(scratch);
 }
@@ -310,27 +314,27 @@ static void load_from_fram(u8 meter)
 {
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
-		fram.read_lifekwh(meter,(u8*)&theMeters.curLife);
-		fram.read_lifedate(meter,(u8*)&theMeters.lastKwHDate);
-		fram.read_month(meter, mesg, (u8*)&theMeters.curMonth);
-		fram.read_monthraw(meter, mesg, (u8*)&theMeters.curMonthRaw);
-		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters.curDay);
-		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters.curDayRaw);
-		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters.curHour);
-		fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters.curHourRaw);
-		fram.read_cycle(meter, mesg, (u8*)&theMeters.curCycle); //should we change this here too and use cycleMonth[meter]?????
-		fram.read_beat(meter,(u8*)&theMeters.currentBeat);
-		theMeters.oldbeat=theMeters.currentBeat;
+		fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
+		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
+		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
+		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
+		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
+		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
+		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
+		fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
+		fram.read_cycle(meter, mesg, (u8*)&theMeters[meter].curCycle); //should we change this here too and use cycleMonth[meter]?????
+		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
+		theMeters[meter].oldbeat=theMeters[meter].currentBeat;
 		if(theConf.beatsPerKw[meter]==0)
 			theConf.beatsPerKw[meter]=800;// just in case div by 0 crash
-		u16 nada=theMeters.currentBeat/theConf.beatsPerKw[meter];
-		theMeters.beatSave=theMeters.currentBeat-(nada*theConf.beatsPerKw[meter]);
-		theMeters.beatSaveRaw=theMeters.beatSave;
-		fram.read_minamps(meter,(u8*)&theMeters.minamps);
-		fram.read_maxamps(meter,(u8*)&theMeters.maxamps);
+		u16 nada=theMeters[meter].currentBeat/theConf.beatsPerKw[meter];
+		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*theConf.beatsPerKw[meter]);
+		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
+		fram.read_minamps(meter,(u8*)&theMeters[meter].minamps);
+		fram.read_maxamps(meter,(u8*)&theMeters[meter].maxamps);
 		xSemaphoreGive(framSem);
 
-			printf("[BEATD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters.curLife,theMeters.currentBeat);
+			printf("[BEATD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
 	}
 }
 
@@ -377,20 +381,8 @@ static void init_fram()
 		//all okey in our Fram after this point
 
 		//load all devices counters from FRAM
-		for (int a=0;a<1;a++)
+		for (int a=0;a<MAXDEVS;a++)
 			load_from_fram(a);
-
-//		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
-//		{
-//			fram.read_tarif_bytes(0, (u8*)&tarifaBPK, sizeof(tarifaBPK)); // read all 100 types of BPK
-//			xSemaphoreGive(framSem);
-//		}
-//
-//		if(fram.intframWords>32768)
-//		{
-//			//	printf("Call load day \n");
-//			loadDayBPK(yearDay);
-//		}
 
 }
 
@@ -435,6 +427,37 @@ void updateDateTime(loginT loginData)
 	settimeofday(&now, NULL);
 }
 
+cJSON* makecJSONMeter(meterType *meter)
+{
+	cJSON *root=cJSON_CreateObject();
+
+	if(root==NULL)
+	{
+		printf("cannot create root\n");
+		return NULL;
+	}
+
+	cJSON *cmdJ=cJSON_CreateObject();
+	cJSON *ar = cJSON_CreateArray();
+
+	if(cmdJ==NULL || ar==NULL)
+	{
+		printf("cannot create aux json\n");
+		return;
+	}
+
+	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
+	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
+	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
+	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
+	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
+	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
+	cJSON_AddItemToArray(ar, cmdJ);
+
+	cJSON_AddItemToObject(root, "Batch",ar);
+	return root;
+}
 
 u16_t sendMsg(char * message, uint8_t *donde)
 {
@@ -449,6 +472,7 @@ u16_t sendMsg(char * message, uint8_t *donde)
     struct tm timeinfo;
 	u8 aca[4];
 	tcpip_adapter_ip_info_t ip_info;
+	meterType meter;
 
         do
         {
@@ -482,13 +506,14 @@ u16_t sendMsg(char * message, uint8_t *donde)
 		}
 
 		tcp_nagle_disable(conn->pcb.tcp);
+		printf("Sending mainq %s %d\n",message, strlen(message));
 		netconn_write(conn, message, strlen(message), NETCONN_NOCOPY);
 
 		buflen=0;
 		netconn_set_recvtimeout(conn, 200);
 		err = netconn_recv(conn, &inbuf);
 		if (err == ERR_OK) {
-
+				printf("Client In \n");
 				netbuf_data(inbuf, (void**)&buf, &buflen);
 				memcpy(donde,buf,buflen);
 				netbuf_delete(inbuf);
@@ -496,6 +521,30 @@ u16_t sendMsg(char * message, uint8_t *donde)
 		else
 			printf("Error netconn recv %d\n",err);
 
+		while(uxQueueMessagesWaiting(mqttR)>0)
+		{
+			printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
+			if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
+			{
+				//delay(200);
+				cJSON *nroot=makecJSONMeter(&meter);
+				char *lmessage=cJSON_Print(nroot);
+				printf("Sending queue %s\n",lmessage);
+				err=netconn_write(conn, lmessage, strlen(lmessage), NETCONN_NOCOPY);
+				if(err!=ERR_OK)
+					printf("Queue send err %d\n",err);
+		//		delay(200);
+				free(lmessage);
+				free(nroot);
+
+			}
+			else
+			{
+				printf("Nothing in queue\n");
+				break;
+			}
+		}
+		printf("Closing client\n");
 		netconn_close(conn);
 		netconn_delete(conn);
 		esp_wifi_disconnect();
@@ -549,42 +598,14 @@ void logIn()
 void sendStatusMeter(meterType* meter)
 {
     loginT 	loginData;
-    struct 	tm timeinfo;
 
-	cJSON *root=cJSON_CreateObject();
-
-	if(root==NULL)
-	{
-		printf("cannot create root\n");
-		return;
-	}
-
-	cJSON *cmdJ=cJSON_CreateObject();
-	cJSON *ar = cJSON_CreateArray();
-
-	if(cmdJ==NULL || ar==NULL)
-	{
-		printf("cannot create aux cjson\n");
-		return;
-	}
-
-	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
-	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
-	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
-	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
-	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
-	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
-	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
-	cJSON_AddItemToArray(ar, cmdJ);
-
-	cJSON_AddItemToObject(root, "Batch",ar);
-
-	char *rendered=cJSON_Print(root);
+    cJSON *root=makecJSONMeter(meter);
+    char *rendered=cJSON_Print(root);
 
 	if (deb)
 		printf("[MQTTD]Json %s\n",rendered);
 
-	printf("Sending message %d... ",++sentTotal);
+	printf("Sending message %d wait %d... ",++sentTotal,uxQueueMessagesWaiting(mqttR));
 	fflush(stdout);
 
 	sendMsg(rendered,(uint8_t*)&loginData);
@@ -681,17 +702,18 @@ static void mqttManager(void* arg)
 	while(1)
 	{
 		if( xQueueReceive( mqttR, &meter, portMAX_DELAY/  portTICK_RATE_MS ))
+		{
+			printf("Meter %d Beat %d Pos %d Queue %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR));
+			if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 			{
-			//	printf("Meter %d Beat %d Pos %d Queue %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR));
-				write_to_fram(0,meter.saveit);
-				sendStatusMeter(&theMeters);
+				write_to_fram(meter.pos,meter.saveit);
+				xSemaphoreGive(framSem);
 			}
+			sendStatusMeter(&meter);
+		}
 		else
 			delay(100);
-
-
 	}
-
 }
 
 #ifdef SENDER
@@ -1047,8 +1069,9 @@ void sender(void *pArg)
 				case '0':
 					printf("Flushing Fram...");
 					fflush(stdout);
-					write_to_fram(0,false);
-					printf("done\n");
+					for(int a=0;a<MAXDEVS;a++)
+						write_to_fram(a,false);
+					printf("%d meters flushed\n",MAXDEVS);
 					break;
 
 				default:
