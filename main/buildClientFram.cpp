@@ -521,29 +521,29 @@ u16_t sendMsg(char * message, uint8_t *donde)
 		else
 			printf("Error netconn recv %d\n",err);
 
-		while(uxQueueMessagesWaiting(mqttR)>0)
-		{
-			printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
-			if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
-			{
-				//delay(200);
-				cJSON *nroot=makecJSONMeter(&meter);
-				char *lmessage=cJSON_Print(nroot);
-				printf("Sending queue %s\n",lmessage);
-				err=netconn_write(conn, lmessage, strlen(lmessage), NETCONN_NOCOPY);
-				if(err!=ERR_OK)
-					printf("Queue send err %d\n",err);
-		//		delay(200);
-				free(lmessage);
-				free(nroot);
-
-			}
-			else
-			{
-				printf("Nothing in queue\n");
-				break;
-			}
-		}
+//		while(uxQueueMessagesWaiting(mqttR)>0)
+//		{
+//			printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
+//			if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
+//			{
+//				//delay(200);
+//				cJSON *nroot=makecJSONMeter(&meter);
+//				char *lmessage=cJSON_Print(nroot);
+//				printf("Sending queue %s\n",lmessage);
+//				err=netconn_write(conn, lmessage, strlen(lmessage), NETCONN_NOCOPY);
+//				if(err!=ERR_OK)
+//					printf("Queue send err %d\n",err);
+//		//		delay(200);
+//				free(lmessage);
+//				free(nroot);
+//
+//			}
+//			else
+//			{
+//				printf("Nothing in queue\n");
+//				break;
+//			}
+//		}
 		printf("Closing client\n");
 		netconn_close(conn);
 		netconn_delete(conn);
