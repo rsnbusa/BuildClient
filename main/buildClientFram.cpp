@@ -11,12 +11,15 @@ u16								mesg,diag,horag,yearg;
 meterType						theMeters[MAXDEVS];
 gpio_config_t 					io_conf;
 cmdType							theCmd;
-u16                  			diaHoraTarifa,yearDay;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
+u16                  			diaHoraTarifa,yearDay,llevoMsg=0;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
 nvs_handle 						nvshandle;
 FramSPI							fram;
 uint8_t							tempb[MAXBUFF];
 uint8_t 						daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
 char							theMac[20],them[6];
+ip_addr_t 						remote;
+u8 								aca[4];
+tcpip_adapter_ip_info_t 		ip_info;
 
 static const char *TAG = "BDGCLIENT";
 
@@ -426,6 +429,18 @@ void updateDateTime(loginT loginData)
 	struct timeval now = { .tv_sec = loginData.thedate, .tv_usec=0};
 	settimeofday(&now, NULL);
 }
+cJSON *makeCmdcJSON(meterType *meter)
+{
+	cJSON *cmdJ=cJSON_CreateObject();
+	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
+	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
+	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
+	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
+	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
+	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
+	return cmdJ;
+}
 
 cJSON* makecJSONMeter(meterType *meter)
 {
@@ -437,7 +452,8 @@ cJSON* makecJSONMeter(meterType *meter)
 		return NULL;
 	}
 
-	cJSON *cmdJ=cJSON_CreateObject();
+//	cJSON *cmdJ=cJSON_CreateObject();
+	cJSON *cmdJ=makeCmdcJSON(meter);
 	cJSON *ar = cJSON_CreateArray();
 
 	if(cmdJ==NULL || ar==NULL)
@@ -446,13 +462,13 @@ cJSON* makecJSONMeter(meterType *meter)
 		return;
 	}
 
-	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
-	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
-	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
-	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
-	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
-	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
-	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
+//	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+//	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
+//	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
+//	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
+//	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
+//	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
+//	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
 	cJSON_AddItemToArray(ar, cmdJ);
 
 	cJSON_AddItemToObject(root, "Batch",ar);
@@ -462,7 +478,6 @@ cJSON* makecJSONMeter(meterType *meter)
 u16_t sendMsg(char * message, uint8_t *donde)
 {
     struct netconn *conn = netconn_new(NETCONN_TCP);
-    ip_addr_t remote;
     int waitTime;
 	struct netbuf *inbuf;
 	uint8_t *buf;
@@ -470,8 +485,6 @@ u16_t sendMsg(char * message, uint8_t *donde)
     loginT loginData;
     char strftime_buf[64];
     struct tm timeinfo;
-	u8 aca[4];
-	tcpip_adapter_ip_info_t ip_info;
 	meterType meter;
 
         do
@@ -492,12 +505,12 @@ u16_t sendMsg(char * message, uint8_t *donde)
         			return;
           		}
 
-    		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
-    //    		printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
-    //    		printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
-    //    		printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
-    	memcpy(&aca,&ip_info.gw,4);
-    	IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
+        		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+        	//    		printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+        	//    		printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+        	//    		printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
+        		memcpy(&aca,&ip_info.gw,4);
+        		IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
 
 		err_t err = netconn_connect(conn, &remote, BDGHOSTPORT);
 		if (err != ERR_OK) {
@@ -505,9 +518,10 @@ u16_t sendMsg(char * message, uint8_t *donde)
 		  return;
 		}
 
-		tcp_nagle_disable(conn->pcb.tcp);
+		//tcp_nagle_disable(conn->pcb.tcp);
 		printf("Sending mainq %s %d\n",message, strlen(message));
 		netconn_write(conn, message, strlen(message), NETCONN_NOCOPY);
+		llevoMsg++;
 
 		buflen=0;
 		netconn_set_recvtimeout(conn, 200);
@@ -521,32 +535,58 @@ u16_t sendMsg(char * message, uint8_t *donde)
 		else
 			printf("Error netconn recv %d\n",err);
 
-//		while(uxQueueMessagesWaiting(mqttR)>0)
-//		{
-//			printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
-//			if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
-//			{
-//				//delay(200);
-//				cJSON *nroot=makecJSONMeter(&meter);
-//				char *lmessage=cJSON_Print(nroot);
-//				printf("Sending queue %s\n",lmessage);
-//				err=netconn_write(conn, lmessage, strlen(lmessage), NETCONN_NOCOPY);
-//				if(err!=ERR_OK)
-//					printf("Queue send err %d\n",err);
-//		//		delay(200);
-//				free(lmessage);
-//				free(nroot);
-//
-//			}
-//			else
-//			{
-//				printf("Nothing in queue\n");
-//				break;
-//			}
-//		}
+		//////////////  test if something else in Queue and send them all //////////////////
+		if(uxQueueMessagesWaiting(mqttR)>0)
+		{
+			cJSON *nroot=cJSON_CreateObject();
+
+			if(nroot==NULL)
+			{
+				printf("cannot create nroot\n");
+				return NULL;
+			}
+			cJSON *nar = cJSON_CreateArray();
+
+			delay(200); // accumulate more
+
+			printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
+			while(uxQueueMessagesWaiting(mqttR)>0)
+			{
+				if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
+				{
+					cJSON *cmdJ=makeCmdcJSON(&meter);
+					cJSON_AddItemToArray(nar, cmdJ);
+
+				}
+			}
+				cJSON_AddItemToObject(nroot, "Batch",nar);
+
+				char *lmessage=cJSON_Print(nroot);
+				printf("Sending queue %s\n",lmessage);
+				err=netconn_write(conn, lmessage, strlen(lmessage), NETCONN_NOCOPY);
+				if(err!=ERR_OK)
+					printf("Queue send err %d\n",err);
+		//		delay(200);
+				llevoMsg++;
+				free(lmessage);
+				free(nroot);
+
+				buflen=0;
+				netconn_set_recvtimeout(conn, 100);
+				err = netconn_recv(conn, &inbuf);
+				if (err == ERR_OK) {
+					printf("Client In \n");
+					netbuf_data(inbuf, (void**)&buf, &buflen);
+					memcpy(donde,buf,buflen);
+					netbuf_delete(inbuf);
+				}
+				else
+					printf("Error netconn recv %d\n",err);
+		}
 		printf("Closing client\n");
 		netconn_close(conn);
 		netconn_delete(conn);
+		delay(100);
 		esp_wifi_disconnect();
       }
     else
@@ -1073,7 +1113,9 @@ void sender(void *pArg)
 						write_to_fram(a,false);
 					printf("%d meters flushed\n",MAXDEVS);
 					break;
-
+				case '9':
+					printf("Total sent msgs %d\n",llevoMsg);
+					break;
 				default:
 					break;
 				}
@@ -1169,7 +1211,11 @@ void app_main()
 //get time from host and set local time for any time related work
 	char them[6];
 
+
+
 	esp_efuse_mac_get_default(them);
 	sprintf(theMac,"%02x:%02x:%02x:%02x:%02x:%02x",them[0],them[1],them[2],them[3],them[4],them[5]);
 	logIn();
+
+
 }
