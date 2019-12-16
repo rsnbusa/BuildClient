@@ -232,7 +232,7 @@ Discarded input sections
  .text.esp_log_early_timestamp
                 0x0000000000000000       0x1f /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/log/liblog.a(log.o)
  .rodata.str1.1
-                0x0000000000000000       0x6c /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/log/liblog.a(log.o)
+                0x0000000000000000       0x95 /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/log/liblog.a(log.o)
  .text.esp_log_buffer_hex_internal
                 0x0000000000000000       0xe7 /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/log/liblog.a(log.o)
  .text.esp_log_buffer_char_internal

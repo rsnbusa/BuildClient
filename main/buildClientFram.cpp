@@ -1,7 +1,7 @@
 #include "includes.h"
 
 config_flash					theConf;
-QueueHandle_t 					mqttQ,mqttR;
+QueueHandle_t 					mqttQ,mqttR,framQ;
 SemaphoreHandle_t 				wifiSem,framSem;
 char							deb;
 u32								sentTotal=0,sendTcp=0;
@@ -9,18 +9,18 @@ u8								qwait=0;
 u16 							qdelay,addressBytes;
 u16								mesg,diag,horag,yearg;
 meterType						theMeters[MAXDEVS];
+u8								theBreakers[MAXDEVS];
 gpio_config_t 					io_conf;
 cmdType							theCmd;
-u16                  			diaHoraTarifa,yearDay,llevoMsg=0;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
+u16                  			diaHoraTarifa,yearDay,llevoMsg=0,waitQueue=500;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
 nvs_handle 						nvshandle;
 FramSPI							fram;
 uint8_t							tempb[MAXBUFF];
 uint8_t 						daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
 char							theMac[20],them[6];
-ip_addr_t 						remote;
-u8 								aca[4];
-tcpip_adapter_ip_info_t 		ip_info;
-
+uint32_t						totalMsg[MAXDEVS],theMacNum;
+int								gsock;
+bool							conn=false;
 static const char *TAG = "BDGCLIENT";
 
 //* change
@@ -101,7 +101,7 @@ void gpio_isr_handler(void * arg)
 
 					if(mqttR)
 					{
-						xQueueSendFromISR( mqttR,&theMeters[meter->pos],&tasker );
+						xQueueSendFromISR( mqttR,meter,&tasker );
 							if (tasker)
 									portYIELD_FROM_ISR();
 					}
@@ -117,10 +117,17 @@ void install_meter_interrupts()
 	char 	temp[30];
 	u8 		mac[6];
 
-	theMeters[0].pin=METER1;
-	theMeters[1].pin=METER2;
-	theMeters[2].pin=METER3;
-	theMeters[3].pin=METER4;
+	theMeters[0].pin=METER0;
+	theMeters[1].pin=METER1;
+	theMeters[2].pin=METER2;
+	theMeters[3].pin=METER3;
+	theMeters[4].pin=METER4;
+
+	theMeters[0].pinB=BREAK0;
+	theMeters[1].pinB=BREAK1;
+	theMeters[2].pinB=BREAK2;
+	theMeters[3].pinB=BREAK3;
+	theMeters[4].pinB=BREAK4;
 
 	esp_wifi_get_mac(ESP_IF_WIFI_STA, (u8*)&mac);
 	sprintf(temp,"MeterIoT%02x%02x",mac[4],mac[5]);
@@ -132,6 +139,7 @@ void install_meter_interrupts()
 	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
 	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
 
+	// Input Pins configuration
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		sprintf(theMeters[a].serialNumber,"MeterIoT%02x%02x/%d",mac[4],mac[5],a);
@@ -139,6 +147,18 @@ void install_meter_interrupts()
 		io_conf.pin_bit_mask = (1ULL<<theMeters[a].pin);
 		gpio_config(&io_conf);
 		gpio_isr_handler_add((gpio_num_t)theMeters[a].pin, gpio_isr_handler, (void*)&theMeters[a]);
+	}
+
+	// Breakers pin configuration.
+	io_conf.intr_type = GPIO_INTR_ANYEDGE;
+	io_conf.mode = GPIO_MODE_OUTPUT;
+	io_conf.pull_down_en =GPIO_PULLDOWN_ENABLE;
+	io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
+
+	for (int a=0;a<MAXDEVS;a++)
+	{
+		io_conf.pin_bit_mask = (1ULL<<theMeters[a].pinB);
+		gpio_config(&io_conf);
 	}
 
 	io_conf.mode = GPIO_MODE_OUTPUT;
@@ -435,10 +455,13 @@ cJSON *makeCmdcJSON(meterType *meter)
 	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
 	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
 	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
-	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
+	cJSON_AddNumberToObject(cmdJ,"Transactions",	++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
 	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
 	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
 	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
+	cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
+	cJSON_AddNumberToObject(cmdJ,"macn",			theMacNum);
+
 	return cmdJ;
 }
 
@@ -475,123 +498,159 @@ cJSON* makecJSONMeter(meterType *meter)
 	return root;
 }
 
-u16_t sendMsg(char * message, uint8_t *donde)
+cJSON * makeGroupCmd(meterType *pmeter)
 {
-    struct netconn *conn = netconn_new(NETCONN_TCP);
-    int waitTime;
-	struct netbuf *inbuf;
-	uint8_t *buf;
-	u16_t buflen;
-    loginT loginData;
-    char strftime_buf[64];
-    struct tm timeinfo;
 	meterType meter;
+	framMeterType thisMeter;
 
-        do
-        {
-        	waitTime=rand() % 600;
-        	} while (waitTime<200);
+		thisMeter.whichMeter=pmeter->pos;
+		thisMeter.addit=pmeter->saveit;
+		xQueueSend(framQ,&thisMeter,0);
 
-        delay(waitTime);
-
-        if(esp_wifi_connect()==ESP_OK)
-        {
-
-        	EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS);
-
-        		if ((uxBits & WIFI_BIT)!=WIFI_BIT)
-        		{
-        		//	printf("Failed wait\n");// wait for connection
-        			return;
-          		}
-
-        		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
-        	//    		printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
-        	//    		printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
-        	//    		printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
-        		memcpy(&aca,&ip_info.gw,4);
-        		IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
-
-		err_t err = netconn_connect(conn, &remote, BDGHOSTPORT);
-		if (err != ERR_OK) {
-		  printf("Connect failed %d\n",err);
-		  return;
-		}
-
-		//tcp_nagle_disable(conn->pcb.tcp);
-		printf("Sending mainq %s %d\n",message, strlen(message));
-		netconn_write(conn, message, strlen(message), NETCONN_NOCOPY);
-		llevoMsg++;
-
-		buflen=0;
-		netconn_set_recvtimeout(conn, 200);
-		err = netconn_recv(conn, &inbuf);
-		if (err == ERR_OK) {
-				printf("Client In \n");
-				netbuf_data(inbuf, (void**)&buf, &buflen);
-				memcpy(donde,buf,buflen);
-				netbuf_delete(inbuf);
-		}
-		else
-			printf("Error netconn recv %d\n",err);
-
-		//////////////  test if something else in Queue and send them all //////////////////
-		if(uxQueueMessagesWaiting(mqttR)>0)
-		{
-			cJSON *nroot=cJSON_CreateObject();
-
-			if(nroot==NULL)
+	/////// Create Message for Grouped Cmds ///////////////////
+			cJSON *root=cJSON_CreateObject();
+			if(root==NULL)
 			{
 				printf("cannot create nroot\n");
 				return NULL;
 			}
-			cJSON *nar = cJSON_CreateArray();
+			esp_efuse_mac_get_default(them);
+		//	memcpy(&theMacNum,&them[2],4);
+		//	printf("Mac %d\n",theMacNum);
+			double dmac=(double)theMacNum;
+		//	sprintf(theMac,"%02x:%02x:%02x:%02x:%02x:%02x",them[0],them[1],them[2],them[3],them[4],them[5]);
+			cJSON *ar = cJSON_CreateArray();
+			cJSON *cmdJ=cJSON_CreateObject();
+			cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+			cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
+			cJSON_AddStringToObject(cmdJ,"MeterId",			pmeter->serialNumber);
+			cJSON_AddNumberToObject(cmdJ,"Transactions",	++theMeters[pmeter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
+			cJSON_AddNumberToObject(cmdJ,"KwH",				pmeter->curLife);
+			cJSON_AddNumberToObject(cmdJ,"Beats",			pmeter->currentBeat);
+			cJSON_AddNumberToObject(cmdJ,"Pulse",			pmeter->pulse);
+			cJSON_AddNumberToObject(cmdJ,"Pos",				pmeter->pos);
+			cJSON_AddNumberToObject(cmdJ,"macn",			dmac);
 
-			delay(200); // accumulate more
+			totalMsg[pmeter->pos]++;
 
-			printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
-			while(uxQueueMessagesWaiting(mqttR)>0)
+			cJSON_AddItemToArray(ar, cmdJ);
+			delay(waitQueue); // accumulate more
+
+			//////////////  test if something else in Queue and send them all //////////////////
+			if(uxQueueMessagesWaiting(mqttR)>0)
 			{
-				if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
-				{
-					cJSON *cmdJ=makeCmdcJSON(&meter);
-					cJSON_AddItemToArray(nar, cmdJ);
 
+				printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
+				while(uxQueueMessagesWaiting(mqttR)>0)
+				{
+					if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
+					{
+						cJSON *cmdInt=makeCmdcJSON(&meter);
+						cJSON_AddItemToArray(ar, cmdInt);
+						thisMeter.whichMeter=meter.pos;
+						thisMeter.addit=meter.saveit;
+						totalMsg[meter.pos]++;
+						xQueueSend(framQ,&thisMeter,0);
+					}
 				}
 			}
-				cJSON_AddItemToObject(nroot, "Batch",nar);
 
-				char *lmessage=cJSON_Print(nroot);
-				printf("Sending queue %s\n",lmessage);
-				err=netconn_write(conn, lmessage, strlen(lmessage), NETCONN_NOCOPY);
-				if(err!=ERR_OK)
-					printf("Queue send err %d\n",err);
-		//		delay(200);
-				llevoMsg++;
-				free(lmessage);
-				free(nroot);
+			cJSON_AddItemToObject(root, "Batch",ar);
+			return root;
+}
 
-				buflen=0;
-				netconn_set_recvtimeout(conn, 100);
-				err = netconn_recv(conn, &inbuf);
-				if (err == ERR_OK) {
-					printf("Client In \n");
-					netbuf_data(inbuf, (void**)&buf, &buflen);
-					memcpy(donde,buf,buflen);
-					netbuf_delete(inbuf);
+
+void sendMsg(uint8_t *lmessage, uint8_t *donde)
+{
+    int waitTime;
+	ip_addr_t 						remote;
+	u8 								aca[4];
+	tcpip_adapter_ip_info_t 		ip_info;
+    struct timeval to;
+	int addr_family;
+	int ip_protocol,err;
+
+	if(!conn)
+	{
+		gsock=-1;
+		if(esp_wifi_connect()==ESP_OK)
+		{
+			printf("Stablish conn\n");
+			EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS);
+			if ((uxBits & WIFI_BIT)!=WIFI_BIT)
+			{
+			//	printf("Failed wait\n");// wait for connection
+				return;
+			}
+			conn=true;
+
+			ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+			//    		printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+			//    		printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+			//    		printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
+				memcpy(&aca,&ip_info.gw,4);
+				IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
+
+				struct sockaddr_in dest_addr;
+				memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);
+				dest_addr.sin_family = AF_INET;
+				dest_addr.sin_port = htons(BDGHOSTPORT);
+				addr_family = AF_INET;
+				ip_protocol = IPPROTO_IP;
+			 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+
+				gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
+				if (gsock < 0) {
+					printf( "Unable to create socket: errno %d\n", errno);
+
 				}
-				else
-					printf("Error netconn recv %d\n",err);
+			   printf("Socket %d created, connecting to %s:%d\n",gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
+
+				err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+				if (err != 0) {
+					printf( "Socket unable to connect: errno %d\n", errno);
+					}
 		}
-		printf("Closing client\n");
-		netconn_close(conn);
-		netconn_delete(conn);
-		delay(100);
-		esp_wifi_disconnect();
-      }
-    else
-    	printf("Could not esp_connect\n");
-        return buflen;
+	    else
+	    {
+	    	printf("Could not esp_connect\n");
+	    	return;
+	    }
+	}
+		do
+		{
+			waitTime=rand() % 600;
+		} while (waitTime<200);
+
+		delay(waitTime);// let OTHER meterclients have a chance based on randomness
+
+	//	if(deb)
+			printf("Sending queue %s\n",lmessage);
+
+             err = send(gsock, lmessage, strlen(lmessage), 0);
+            if (err < 0) {
+               printf( "Sock %d Error occurred during sending: errno %d\n",gsock, errno);
+               conn=false;
+               	 return;
+            }
+
+            	to.tv_sec = 2;
+                to.tv_usec = 0;
+
+                if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
+
+                {
+                    printf("Unable to set read timeout on socket!\n");
+          //         return;
+                    vTaskDelete(NULL);
+                }
+            int len = recv(gsock, donde, 500, 0);
+
+		printf("Leaving sendmsg\n");
+     //   shutdown(gsock, 0);
+    //    close(gsock);
+	//	delay(100);
+	//	esp_wifi_disconnect();
 
 }
 
@@ -599,6 +658,7 @@ u16_t sendMsg(char * message, uint8_t *donde)
 void logIn()
 {
     loginT loginData;
+	gpio_set_level((gpio_num_t)WIFILED, 1);
 
 	setenv("TZ", LOCALTIME, 1);
 	tzset();
@@ -613,7 +673,6 @@ void logIn()
 		return;
 	}
 
-
 	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
 	cJSON_AddStringToObject(cmdJ,"password",		"zipo");
 	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_login");
@@ -622,8 +681,13 @@ void logIn()
 	cJSON_AddItemToObject(root, "Batch",ar);
 
 	char *logMsg=cJSON_Print(root);
+//	memset(tempb,0,1000);
+//    if (!cJSON_PrintPreallocated(root, tempb, 1000, 1)) {
+//printf("fail \n");
+//    }
 
-	sendMsg(logMsg,(uint8_t*)&loginData);
+	sendMsg((uint8_t*)logMsg,(uint8_t*)&loginData);
+//	sendMsg((uint8_t*)tempb,(uint8_t*)&loginData);
 
 	updateDateTime(loginData);
 
@@ -631,34 +695,34 @@ void logIn()
 		printf("Login year %d month %d day %d hour %d Tariff %d\n",yearg,mesg,diag,horag,loginData.theTariff);
 
 	free(logMsg);
-	free(root);
+	cJSON_Delete(root);
+	gpio_set_level((gpio_num_t)WIFILED, 0);
+
 }
 
 
 void sendStatusMeter(meterType* meter)
 {
     loginT 	loginData;
+    meterType lmeter;
+	gpio_set_level((gpio_num_t)WIFILED, 1);
 
-    cJSON *root=makecJSONMeter(meter);
-    char *rendered=cJSON_Print(root);
-
-	if (deb)
-		printf("[MQTTD]Json %s\n",rendered);
-
-	printf("Sending message %d wait %d... ",++sentTotal,uxQueueMessagesWaiting(mqttR));
+	printf("SendM %d Heap %d wait %d... ",++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
 	fflush(stdout);
-
-	sendMsg(rendered,(uint8_t*)&loginData);
+	cJSON *root=makeGroupCmd(meter);
+	char *lmessage=cJSON_Print(root);
+	sendMsg((uint8_t*)lmessage,(uint8_t*)&loginData);
 	updateDateTime(loginData);
+	free(lmessage);
+	cJSON_Delete(root);
 
 	if(deb)
 		printf("SendMeterFram dates year %d month %d day %d hour %d Tariff %d\n",yearg,mesg,diag,horag,loginData.theTariff);
 
-	free(rendered);
-	cJSON_Delete(root);
 	printf("Tar %d sent Heap %d\n",loginData.theTariff,esp_get_free_heap_size());
+	gpio_set_level((gpio_num_t)WIFILED, 0);
 
-	}
+}
 
 #ifdef SENDER
 void sendStatusNow(meterType* meter)
@@ -743,13 +807,9 @@ static void mqttManager(void* arg)
 	{
 		if( xQueueReceive( mqttR, &meter, portMAX_DELAY/  portTICK_RATE_MS ))
 		{
-			printf("Meter %d Beat %d Pos %d Queue %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR));
-			if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
-			{
-				write_to_fram(meter.pos,meter.saveit);
-				xSemaphoreGive(framSem);
-			}
+			printf("Meter %d Beat %d Pos %d Queue %d Heap %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR),esp_get_free_heap_size());
 			sendStatusMeter(&meter);
+			printf("mqttloop heap %d\n",esp_get_free_heap_size());
 		}
 		else
 			delay(100);
@@ -848,6 +908,19 @@ void sender(void *pArg)
 			{
 				switch(data[0])
 				{
+				case 'q':
+				case 'Q':
+					printf("Queue Wait(%d):",waitQueue);
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+							break;
+					}
+					waitQueue=atoi(s1);
+					printf("Wait now %d\n",waitQueue);
+					break;
 				case 'x':
 				case 'X':
 					printf("Dumping core...\n");
@@ -915,10 +988,6 @@ void sender(void *pArg)
 					fueron=atoi(s1);
 					fram.write8(framAddress,fueron);
 					break;
-				case 'q':
-				case 'Q':
-						printf("Queue Waiting %d available %d\n",uxQueueMessagesWaiting( mqttQ ),uxQueueSpacesAvailable(mqttQ));
-						break;
 				case 'd':
 				case 'D':
 						deb=!deb;
@@ -1114,7 +1183,9 @@ void sender(void *pArg)
 					printf("%d meters flushed\n",MAXDEVS);
 					break;
 				case '9':
-					printf("Total sent msgs %d\n",llevoMsg);
+					for (int a=0;a<MAXDEVS;a++)
+						printf("TotalMsg[%d] sent msgs %d\n",a,totalMsg[a]);
+					printf("Controller Total %d\n",sentTotal);
 					break;
 				default:
 					break;
@@ -1153,6 +1224,31 @@ void sender(void *pArg)
 		printf("Centinel %x\n",theConf.centinel);
 	}
 
+void framManager(void * pArg)
+{
+	framMeterType theMeter;
+
+	while(1)
+	{
+		while(uxQueueMessagesWaiting(framQ)>0)
+		{
+			if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+			{
+				while(uxQueueMessagesWaiting(framQ)>0)
+				{
+					if( xQueueReceive( framQ, &theMeter, 500/  portTICK_RATE_MS ))
+					{
+						write_to_fram(theMeter.whichMeter,theMeter.addit);
+						printf("Saving Meter %d add %d\n",theMeter.whichMeter,theMeter.addit);
+					}
+				}
+				xSemaphoreGive(framSem);
+			}
+		}
+		delay(400);
+	}
+}
+
 void app_main()
 {
 	ESP_LOGI(TAG, "[APP] Startup..");
@@ -1180,7 +1276,7 @@ void app_main()
    deb=false;
    qwait=QDELAY;
    qdelay=qwait*1000;
-   sendTcp=500;
+   sendTcp=waitQueue=500;
 
    wifiSem= xSemaphoreCreateBinary();
    xSemaphoreGive(wifiSem);
@@ -1192,6 +1288,10 @@ void app_main()
 	mqttR = xQueueCreate( 20, sizeof( meterType ) );
 	if(!mqttR)
 		printf("Failed queue Rx\n");
+
+	framQ = xQueueCreate( 20, sizeof( framMeterType ) );
+	if(!framQ)
+		printf("Failed queue Fram\n");
 
 	memset(&theMeters,0,sizeof(theMeters));
 
@@ -1214,8 +1314,9 @@ void app_main()
 
 
 	esp_efuse_mac_get_default(them);
+	memcpy(&theMacNum,&them[2],4);
 	sprintf(theMac,"%02x:%02x:%02x:%02x:%02x:%02x",them[0],them[1],them[2],them[3],them[4],them[5]);
 	logIn();
-
+	xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);
 
 }

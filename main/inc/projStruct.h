@@ -15,7 +15,7 @@ typedef struct loginTarif{
 
 typedef struct meterType{
 	 char serialNumber[20];
-	 uint8_t meterid,state,pos,pin;
+	 uint8_t meterid,state,pos,pin,pinB;
 	 uint32_t timestamp,startConn,pulse;
 	 uint32_t currentBeat,oldbeat,vanMqtt;
 	 u16 elpin;

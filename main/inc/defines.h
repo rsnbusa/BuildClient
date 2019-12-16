@@ -8,7 +8,7 @@
 #define u8								uint8_t
 
 #define QDELAY							2
-#define WIFILED							14
+#define WIFILED							2
 
 //FRAM pins SPI
 #define FMOSI							23
@@ -24,12 +24,20 @@
 
 #define LOCALTIME						"GMT+5"
 
-#define MAXDEVS							4
+#define MAXDEVS							5
 #define MAXBUFF							10000
 
-#define METER1							4
-#define METER2							22
-#define METER3							16
-#define METER4							17
+#define METER0							4
+#define METER1							22
+#define METER2							16
+#define METER3							17
+#define METER4							21
+
+#define BREAK0							13
+#define BREAK1							14
+#define BREAK2							25
+#define BREAK3							26
+#define BREAK4							27
+
 
 #endif
