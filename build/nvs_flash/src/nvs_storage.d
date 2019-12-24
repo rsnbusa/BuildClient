@@ -7,9 +7,6 @@ src/nvs_storage.o: \
  /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
@@ -37,12 +34,6 @@ src/nvs_storage.o: \
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h:
 

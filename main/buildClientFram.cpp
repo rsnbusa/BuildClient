@@ -1,121 +1,255 @@
 #include "includes.h"
+#include "defines.h"
 
+bool							conn=false,framFlag,df=false;
+char							lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6];
 config_flash					theConf;
-QueueHandle_t 					mqttQ,mqttR,framQ;
-SemaphoreHandle_t 				wifiSem,framSem;
-char							deb;
-u32								sentTotal=0,sendTcp=0;
-u8								qwait=0;
-u16 							qdelay,addressBytes;
-u16								mesg,diag,horag,yearg;
-meterType						theMeters[MAXDEVS];
-u8								theBreakers[MAXDEVS];
-gpio_config_t 					io_conf;
-cmdType							theCmd;
-u16                  			diaHoraTarifa,yearDay,llevoMsg=0,waitQueue=500;      // % of Meter tariff. Ex: 800 *120=(20% cheaper).
-nvs_handle 						nvshandle;
+const static int 				WIFI_BIT = BIT0;
 FramSPI							fram;
-uint8_t							tempb[MAXBUFF];
-uint8_t 						daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
-char							theMac[20],them[6];
-uint32_t						totalMsg[MAXDEVS],theMacNum;
+gpio_config_t 					io_conf;
 int								gsock;
-bool							conn=false;
-static const char *TAG = "BDGCLIENT";
+meterType						theMeters[MAXDEVS];
+nvs_handle 						nvshandle;
+QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;
+SemaphoreHandle_t 				wifiSem,framSem;
+static const char 				*TAG = "BDGCLIENT";
+static EventGroupHandle_t 		wifi_event_group;
+u16                  			diaHoraTarifa,yearDay,llevoMsg=0,waitQueue=500,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
+u32								sentTotal=0,sendTcp=0,totalMsg[MAXDEVS],theMacNum,totalPulses;
+u8								qwait=0,theBreakers[MAXDEVS],daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
 
-//* change
+using namespace std;
 
-static EventGroupHandle_t wifi_event_group;
-const static int WIFI_BIT = BIT0;
-//change new again
-//#define SENDER
 #ifdef SENDER
 void submode(void * pArg);
 #endif
 
+void sendStatusMeter(meterType* meter);
+void sendStatusMeterAll();
+
 uint32_t IRAM_ATTR millisISR()
 {
 	return xTaskGetTickCountFromISR() * portTICK_PERIOD_MS;
-
 }
 
 uint32_t IRAM_ATTR millis()
 {
 	return xTaskGetTickCount() * portTICK_PERIOD_MS;
-
 }
 
-void delay(uint16_t a)
+void delay(uint32_t a)
 {
 	vTaskDelay(a /  portTICK_RATE_MS);
 }
 
 
-void gpio_isr_handler(void * arg)
+void hourChange()
 {
-	BaseType_t tasker;
-	u32 fueron;
-	meterType *meter=(meterType*)arg;
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sHour change Old %d New %d\n",CMDDT,oldHorag,horag);
 
-	if(meter->beatsPerkW==0)
-		meter->beatsPerkW=800;
 
-	uint8_t como=gpio_get_level(meter->pin);
-	if(deb)
-		ets_printf("%d pin %d pos %d\n",como,meter->pin,meter->pos);
-
-		if(como)
+	for (int a=0;a<MAXDEVS;a++)
+	{
+		if(theConf.traceflag & (1<<CMDD))
+			printf("%sHour change meter %d val %d\n",CMDDT,a,theMeters[a].curHour);
+		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
-			if (meter->startTimePulse>0) //first time no frame of reference, skip
+			fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
+			fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
+			xSemaphoreGive(framSem);
+		}
+	//	sendStatusMeter(&theMeters[a]);
+		theMeters[a].curHour=0; //init it
+		theMeters[a].curHourRaw=0;
+		oldHorag=horag;
+	//	delay(500);
+	}
+	sendStatusMeterAll();
+
+}
+
+void dayChange()
+{
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sDay change Old %d New %d\n",CMDDT,oldDiag,diag);
+
+
+	for (int a=0;a<MAXDEVS;a++)
 			{
-				meter->timestamp=millisISR();
-				meter->livingPulse+=meter->timestamp-meter->startTimePulse; //array pulseTime has time elapsed in ms between low and high
-				meter->livingCount++;
-				meter->pulse=meter->livingPulse/meter->livingCount;
-				if (meter->livingCount>100)
+				if(theConf.traceflag & (1<<CMDD))
+					printf("%sDay change mes %d day %d oldday %d corte %d sent %d\n",CMDDT,oldMesg,diag,oldDiag,theConf.diaDeCorte[a],theConf.corteSent[a]);
+				if(xSemaphoreTake(framSem, portMAX_DELAY))
 				{
-			//		ets_printf("Pulse %d %d %d\n",meter->livingPulse/meter->livingCount,meter->livingPulse,meter->livingCount);
-					meter->livingPulse=0;
-					meter->livingCount=0;
+					fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
+					theMeters[a].curDay=0;
+					xSemaphoreGive(framSem);
 				}
 			}
+			oldDiag=diag;
+}
 
-			fueron=meter->startTimePulse-meter->timestamp;
-			 if(fueron>=80)
-			 {
-				 meter->timestamp=millisISR(); //last valid isr
-				 meter->beatSave++;
-				 meter->beatSaveRaw++;
-				 meter->currentBeat++;
-				if((meter->currentBeat % (meter->beatsPerkW/10))==0) //every GMAXLOSSPER interval
+void monthChange()
+{
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sMonth change Old %d New %d\n",CMDDT,oldMesg,mesg);
+
+	for (int a=0;a<MAXDEVS;a++)
+			{
+				if(xSemaphoreTake(framSem, portMAX_DELAY))
 				{
-					meter->saveit=false;
-
-					if(meter->beatSaveRaw >= meter->beatsPerkW*diaHoraTarifa/100)
-					{
-						meter->beatSaveRaw=0;
-						//meter->curLife++;
-						meter->beatSave=0;
-						meter->saveit=true;
-					}
-
-					if(mqttR)
-					{
-						xQueueSendFromISR( mqttR,meter,&tasker );
-							if (tasker)
-									portYIELD_FROM_ISR();
-					}
+					fram.write_month(a, oldMesg, theMeters[a].curMonth);
+					xSemaphoreGive(framSem);
+					theMeters[a].curMonth=0;
 				}
-			 }
-		}
-		else //rising edge start pulse timer
-				meter->startTimePulse=millisISR();
+			}
+			oldMesg=mesg;
+}
+
+void check_date_change()
+{
+	time_t now;
+	struct tm timep;
+	time(&now);
+	localtime_r(&now,&timep);
+	mesg=timep.tm_mon;   // Global Month
+	diag=timep.tm_mday-1;    // Global Day
+	yearg=timep.tm_year;     // Global Year
+	horag=timep.tm_hour;     // Global Hour
+	yearDay=timep.tm_yday;
+
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",CMDDT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
+				timep.tm_min,timep.tm_sec,yearDay);
+
+	hourChange();
+	return;
+
+	if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
+		return;
+
+	if(horag!=oldHorag) // hour change up or down
+		hourChange();
+
+	if(diag!=oldDiag) // day change up or down. Also hour MUST HAVE CHANGED before
+	{
+		//	setCycleChange(diag,oldDiag);
+		dayChange();
 	}
 
-void install_meter_interrupts()
+	if(mesg!=oldMesg) // month change up or down. What to do with prev Year???? MONTH MUST HAVE CHANGED
+		monthChange();
+}
+
+static void timeKeeper(void *pArg)
 {
-	char 	temp[30];
-	u8 		mac[6];
+#define QUE 1000 //used to test timer
+	time_t now;
+
+
+	time(&now);
+	int faltan=3600- (now % 3600)+2; //second to next hour +2 secs
+	if(theConf.traceflag & (1<<BOOTD))
+		printf("%sSecs to Hour %d now %d\n",BOOTDT,faltan,(u32)now);
+
+	delay(faltan*QUE);
+	while(true)
+	{
+		check_date_change();
+		delay(3600000);
+	}
+}
+
+
+static void pcntManager(void * pArg)
+{
+	framMeterType theMeter;
+	pcnt_evt_t evt;
+	portBASE_TYPE res;
+	u16 residuo,count;
+	uint32_t timeDiff=0;
+
+	pcnt_evt_queue = xQueueCreate( 20, sizeof( pcnt_evt_t ) );
+	if(!pcnt_evt_queue)
+		printf("Failed create queue PCNT\n");
+
+	while(1)
+	{
+		res = xQueueReceive(pcnt_evt_queue, (void*)&evt,portMAX_DELAY / portTICK_PERIOD_MS);
+		if (res == pdTRUE)
+		{
+			pcnt_get_counter_value((pcnt_unit_t)evt.unit,(short int *) &count);
+			if(theConf.traceflag & (1<<INTD)){
+				printf("%sEvent PCNT unit[%d]; cnt: %d status %x\n",INTDT, evt.unit, count,evt.status);
+			}
+			if (evt.status & PCNT_EVT_THRES_1)
+			{
+				pcnt_counter_clear((pcnt_unit_t)evt.unit);
+
+				if(theMeters[evt.unit].ampTime>0)
+					timeDiff=millis()-theMeters[evt.unit].ampTime;
+				theMeters[evt.unit].ampTime=millis();
+
+				totalPulses+=count;
+
+				theMeters[evt.unit].saveit=false;
+				theMeters[evt.unit].currentBeat+=count;
+				theMeters[evt.unit].beatSave+=count;
+
+				if(diaHoraTarifa==0)
+					diaHoraTarifa=100;
+
+				residuo=theMeters[evt.unit].beatSave % (theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100);
+
+				if(theConf.traceflag & (1<<INTD))
+					printf("%sResiduo %d Beat %d MeterPos %d Time %d BPK %d\n",INTDT,residuo,theMeters[evt.unit].currentBeat,
+							theMeters[evt.unit].pos,timeDiff,theMeters[evt.unit].beatsPerkW);
+
+				if(residuo==0 && theMeters[evt.unit].currentBeat>0)
+				{
+					theMeters[evt.unit].saveit=true;
+					theMeters[evt.unit].beatSave-=theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100;
+				}
+				else
+					theMeters[evt.unit].saveit=false;
+
+				if(mqttQ)
+				{
+					theMeter.addit=residuo==0?1:0;
+					theMeter.whichMeter=evt.unit;
+					xQueueSend( framQ,&theMeter,0 );
+				}
+			}
+        } else
+            printf("PCNT Failed Queue\n");
+	}
+}
+
+static void pcnt_intr_handler(void *arg)
+{
+    uint32_t intr_status = PCNT.int_st.val;
+    int i;
+    pcnt_evt_t evt;
+    portBASE_TYPE HPTaskAwoken = pdFALSE;
+
+    for (i = 0; i < PCNT_UNIT_MAX+1; i++) {
+        if (intr_status & (BIT(i))) {
+            evt.unit = i;
+            evt.status = PCNT.status_unit[i].val;
+            PCNT.int_clr.val = BIT(i);
+
+            xQueueSendFromISR(pcnt_evt_queue, &evt, &HPTaskAwoken);
+            if (HPTaskAwoken == pdTRUE) {
+                portYIELD_FROM_ISR();
+            }
+        }
+    }
+}
+
+static void pcnt_init(void)
+{
+    pcnt_config_t pcnt_config;
+    pcnt_isr_handle_t user_isr_handle = NULL; //user's ISR service handle
 
 	theMeters[0].pin=METER0;
 	theMeters[1].pin=METER1;
@@ -129,77 +263,76 @@ void install_meter_interrupts()
 	theMeters[3].pinB=BREAK3;
 	theMeters[4].pinB=BREAK4;
 
-	esp_wifi_get_mac(ESP_IF_WIFI_STA, (u8*)&mac);
-	sprintf(temp,"MeterIoT%02x%02x",mac[4],mac[5]);
-	printf("Mac %s\n",temp);
-	gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+    memset((void*)&pcnt_config,0,sizeof(pcnt_config));
 
-	io_conf.intr_type = GPIO_INTR_ANYEDGE;
-	io_conf.mode = GPIO_MODE_INPUT;
-	io_conf.pull_down_en =GPIO_PULLDOWN_DISABLE;
-	io_conf.pull_up_en =GPIO_PULLUP_ENABLE;
+	pcnt_config .ctrl_gpio_num 	= 0; // -1 DOES NOT work
+	pcnt_config .channel 		= PCNT_CHANNEL_0;
+	pcnt_config .pos_mode 		= PCNT_COUNT_INC;   // Count up on the positive edge
+	pcnt_config .neg_mode 		= PCNT_COUNT_DIS;   // Keep the counter value on the negative edge
+	pcnt_config .lctrl_mode 		= PCNT_MODE_KEEP; // Reverse counting direction if low
+	pcnt_config .hctrl_mode 	= PCNT_MODE_KEEP;    // Keep the primary counter mode if high
 
-	// Input Pins configuration
-	for (int a=0;a<MAXDEVS;a++)
+    pcnt_isr_register(pcnt_intr_handler, NULL, 0,&user_isr_handle);
+
+	for(int a=0;a<MAXDEVS;a++)
 	{
-		sprintf(theMeters[a].serialNumber,"MeterIoT%02x%02x/%d",mac[4],mac[5],a);
+		pcnt_config.pulse_gpio_num = theMeters[a].pin;
+		pcnt_config.unit = (pcnt_unit_t)a;
+		pcnt_unit_config(&pcnt_config);
+
 		theMeters[a].pos=a;
-		io_conf.pin_bit_mask = (1ULL<<theMeters[a].pin);
-		gpio_config(&io_conf);
-		gpio_isr_handler_add((gpio_num_t)theMeters[a].pin, gpio_isr_handler, (void*)&theMeters[a]);
+		if(theMeters[a].beatsPerkW==0)
+			theMeters[a].beatsPerkW=800;
+
+		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_H_LIM);
+		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_L_LIM);
+		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_THRES_0);
+		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_ZERO);
+
+		pcnt_set_filter_value((pcnt_unit_t)a, 1000);
+		pcnt_filter_enable((pcnt_unit_t)a);
+
+		pcnt_set_event_value((pcnt_unit_t)a, PCNT_EVT_THRES_1, 10);// instead of a lot of code, just lose a most 10 beats
+		pcnt_event_enable((pcnt_unit_t)a, PCNT_EVT_THRES_1);
+
+		pcnt_counter_pause((pcnt_unit_t)a);
+		pcnt_counter_clear((pcnt_unit_t)a);
+		pcnt_intr_enable((pcnt_unit_t)a);
+		pcnt_counter_resume((pcnt_unit_t)a);
 	}
-
-	// Breakers pin configuration.
-	io_conf.intr_type = GPIO_INTR_ANYEDGE;
-	io_conf.mode = GPIO_MODE_OUTPUT;
-	io_conf.pull_down_en =GPIO_PULLDOWN_ENABLE;
-	io_conf.pull_up_en =GPIO_PULLUP_DISABLE;
-
-	for (int a=0;a<MAXDEVS;a++)
-	{
-		io_conf.pin_bit_mask = (1ULL<<theMeters[a].pinB);
-		gpio_config(&io_conf);
-	}
-
-	io_conf.mode = GPIO_MODE_OUTPUT;
-	io_conf.pull_down_en =GPIO_PULLDOWN_ENABLE;
-	io_conf.pin_bit_mask = (1ULL<<WIFILED);
-	gpio_config(&io_conf);
-	gpio_set_level((gpio_num_t)WIFILED, 0);
-
-	}
+}
 
 static void read_flash()
 {
 	esp_err_t q ;
 	size_t largo;
 	q = nvs_open("config", NVS_READONLY, &nvshandle);
-		if(q!=ESP_OK)
-		{
-			printf("Error opening NVS Read File %x\n",q);
-			return;
-		}
+	if(q!=ESP_OK)
+	{
+		printf("Error opening NVS Read File %x\n",q);
+		return;
+	}
 
-			 largo=sizeof(theConf);
-				q=nvs_get_blob(nvshandle,"config",(void*)&theConf,&largo);
+	largo=sizeof(theConf);
+		q=nvs_get_blob(nvshandle,"config",(void*)&theConf,&largo);
 
-			if (q !=ESP_OK)
-				printf("Error read %x largo %d aqui %d\n",q,largo,sizeof(theConf));
+	if (q !=ESP_OK)
+		printf("Error read %x largo %d aqui %d\n",q,largo,sizeof(theConf));
+
 	nvs_close(nvshandle);
-
 }
 
 static void write_to_flash() //save our configuration
 {
 	esp_err_t q ;
 	q = nvs_open("config", NVS_READWRITE, &nvshandle);
-		if(q!=ESP_OK)
-		{
-			printf("Error opening NVS File RW %x\n",q);
-			return;
-		}
+	if(q!=ESP_OK)
+	{
+		printf("Error opening NVS File RW %x\n",q);
+		return;
+	}
 
-		delay(300);
+//	delay(300);
 	q=nvs_set_blob(nvshandle,"config",(void*)&theConf,sizeof(theConf));
 	if (q ==ESP_OK)
 		q = nvs_commit(nvshandle);
@@ -220,7 +353,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             break;
         default:
-        	printf("Default Id %d\n",event_id);
+			if(theConf.traceflag & (1<<WIFID))
+				printf("%sDefault Id %d\n",WIFIDT,event_id);
         //    xEventGroupSetBits(wifi_event_group, WIFI_BIT);//make it fail
             break;
     }
@@ -245,6 +379,14 @@ static void recover_fram()
 	char textl[100];
 
 	scratchTypespi scratch;
+
+    if(!framFlag)
+    {
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("%sFram Is Not Valid\n",FRAMDT);
+		return;
+    }
+
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
 		fram.read_recover(&scratch);
@@ -260,24 +402,26 @@ static void recover_fram()
 		fram.write_month(scratch.medidor.meter,scratch.medidor.mesg,scratch.medidor.month);
 		fram.write_day(scratch.medidor.meter,scratch.medidor.yearg,scratch.medidor.mesg,scratch.medidor.diag,scratch.medidor.day);
 		fram.write_hour(scratch.medidor.meter,scratch.medidor.yearg,scratch.medidor.mesg,scratch.medidor.diag,scratch.medidor.horag,scratch.medidor.hora);
-		fram.write_cycle(scratch.medidor.meter, scratch.medidor.mesg,scratch.medidor.cycle);
-//		scratch.medidor.state=0;                                //variables written state
-//		fram.write_recover(scratch);
-//		scratch.medidor.state=0;                                // done state. OK
-//		fram.write_recover(scratch);
-		fram.write8(SCRATCHOFF,0); //Fast write first byte of Scratch record to 0=done.
+	//	fram.write_cycle(scratch.medidor.meter, scratch.medidor.mesg,scratch.medidor.cycle);
+		fram.write8(SCRATCH,0); //Fast write first byte of Scratch record to 0=done.
 
 		xSemaphoreGive(framSem);
-		printf("Recover %s",textl);
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("%sRecover %s",FRAMDT,textl);
 	}
-	//    mlog(GENERAL, textl);
 }
-
 
 static void write_to_fram(u8 meter,bool addit)
 {
 	time_t timeH;
     struct tm timeinfo;
+
+    if(!framFlag)
+    {
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("%sFram Is Not Valid\n",FRAMDT);
+		return;
+    }
 
 	// FRAM Semaphore is taken by the Interrupt Manager. Safe to work.
 	scratchTypespi scratch;
@@ -287,126 +431,135 @@ static void write_to_fram(u8 meter,bool addit)
 	diag=timeinfo.tm_mday-1;
 	yearg=timeinfo.tm_year+1900;
 	horag=timeinfo.tm_hour-1;
-//	if(aqui.traceflag & (1<<BEATD)) //Should not print. semaphore is taking longer
-	//		printf("[BEATD]Save KWH Meter %d Month %d Day %d Hour %d Year %d lifekWh %d beats %d addkw %d\n",meter,mesg,diag,horag,yearg,
-	//					theMeters.curLife,theMeters.currentBeat,addit);
-			if(addit)
-			{
-				theMeters[meter].curLife++;
-				theMeters[meter].curMonth++;
-				theMeters[meter].curDay++;
-				theMeters[meter].curHour++;
-				theMeters[meter].curCycle++;
-				time(&theMeters[meter].lastKwHDate); //last time we saved data
+
+	if(addit)
+	{
+		theMeters[meter].curLife++;
+		theMeters[meter].curMonth++;
+		theMeters[meter].curDay++;
+		theMeters[meter].curHour++;
+		theMeters[meter].curCycle++;
+		time((time_t*)&theMeters[meter].lastKwHDate); //last time we saved data
 
 
-	scratch.medidor.state=1;                    //scratch written state. Must be 0 to be ok. Every 800-1000 beats so its worth it
-	scratch.medidor.meter=meter;
-	scratch.medidor.month=theMeters[meter].curMonth;
-	scratch.medidor.life=theMeters[meter].curLife;
-	scratch.medidor.day=theMeters[meter].curDay;
-	scratch.medidor.hora=theMeters[meter].curHour;
-	scratch.medidor.cycle=theMeters[meter].curCycle;
-	scratch.medidor.mesg=mesg;
-	scratch.medidor.diag=diag;
-	scratch.medidor.horag=horag;
-	scratch.medidor.yearg=yearg;
-	fram.write_recover(scratch);            //Power Failure recover register
+		scratch.medidor.state=1;                    //scratch written state. Must be 0 to be ok. Every 800-1000 beats so its worth it
+		scratch.medidor.meter=meter;
+		scratch.medidor.month=theMeters[meter].curMonth;
+		scratch.medidor.life=theMeters[meter].curLife;
+		scratch.medidor.day=theMeters[meter].curDay;
+		scratch.medidor.hora=theMeters[meter].curHour;
+		scratch.medidor.cycle=theMeters[meter].curCycle;
+		scratch.medidor.mesg=mesg;
+		scratch.medidor.diag=diag;
+		scratch.medidor.horag=horag;
+		scratch.medidor.yearg=yearg;
+	//	fram.write_recover(scratch);            //Power Failure recover register
 
-	fram.write_beat(meter,theMeters[meter].currentBeat);
-	fram.write_lifekwh(meter,theMeters[meter].curLife);
-	fram.write_month(meter,mesg,theMeters[meter].curMonth);
-	fram.write_monthraw(meter,mesg,theMeters[meter].curMonthRaw);
-	fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
-	fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
-	fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
-	fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
-	fram.write_cycle(meter, mesg,theMeters[meter].curCycle);
-	fram.write_minamps(meter,theMeters[meter].minamps);
-	fram.write_maxamps(meter,theMeters[meter].maxamps);
-	fram.write_lifedate(meter,theMeters[meter].lastKwHDate);  //should be down after scratch record???
-	fram.write8(SCRATCHOFF,0); //Fast write first byte of Scratch record to 0=done.
-			}
-			else
+		fram.write_beat(meter,theMeters[meter].currentBeat);
+		fram.write_lifekwh(meter,theMeters[meter].curLife);
+		fram.write_month(meter,mesg,theMeters[meter].curMonth);
+		fram.write_monthraw(meter,mesg,theMeters[meter].curMonthRaw);
+		fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
+		fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
+		fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
+		fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
+		fram.write_lifedate(meter,theMeters[meter].lastKwHDate);  //should be down after scratch record???
+	//	fram.write8(SCRATCH,0); //Fast write first byte of Scratch record to 0=done.
+	}
+		else
+		{
 			fram.write_beat(meter,theMeters[meter].currentBeat);
-//	scratch.medidor.state=0;            // done state. OK
-//	FramSPI_write_recover(scratch);
+			fram.writeMany(FRAMDATE,(uint8_t*)&timeH,sizeof(timeH));//last known date
+		}
 }
 
-static void load_from_fram(u8 meter)
+void load_from_fram(u8 meter)
 {
+	volatile u16 a;
+	volatile u32 b;
+	volatile u8 c;
+
+    if(!framFlag)
+    {
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("%sFram Is Not Valid\n",FRAMDT);
+		return;
+    }
+
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
+		if (diaHoraTarifa==0)
+			diaHoraTarifa=100;
+	//	fram.read_lifekwh(meter,(u8*)&b);
 		fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
-		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
-		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
-		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
-		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
-		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
-		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
-		fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
-		fram.read_cycle(meter, mesg, (u8*)&theMeters[meter].curCycle); //should we change this here too and use cycleMonth[meter]?????
-		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
-		theMeters[meter].oldbeat=theMeters[meter].currentBeat;
+		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+	//	fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
+		fram.read_lifedate(meter,(u8*)&b);
+		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+	//	fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
+		fram.read_month(meter, mesg, (u8*)&a);
+		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+	//	fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
+		fram.read_monthraw(meter, mesg, (u8*)&a);
+		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+	//	fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
+		fram.read_day(meter, yearg,mesg, diag, (u8*)&a);
+		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+	//	fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
+		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&a);
+	printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+//	fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
+	fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&c);
+	printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+//	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
+	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&c);
+	printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+//	fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
+	fram.read_beat(meter,(u8*)&a);
+		totalPulses+=theMeters[meter].currentBeat;
 		if(theConf.beatsPerKw[meter]==0)
 			theConf.beatsPerKw[meter]=800;// just in case div by 0 crash
+		if(theMeters[meter].beatsPerkW==0)
+			theMeters[meter].beatsPerkW=800;// just in case div by 0 crash
 		u16 nada=theMeters[meter].currentBeat/theConf.beatsPerKw[meter];
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*theConf.beatsPerKw[meter]);
-		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
-		fram.read_minamps(meter,(u8*)&theMeters[meter].minamps);
-		fram.read_maxamps(meter,(u8*)&theMeters[meter].maxamps);
-		xSemaphoreGive(framSem);
+		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+	xSemaphoreGive(framSem);
 
-			printf("[BEATD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("[FRAMD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
 	}
 }
-
-//static void loadDayBPK(u16 hoy)
-//{
-//	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS)){
-//		fram.read_tarif_day(hoy, (u8*)&diaTarifa); // all 24 hours of todays Tariff Types [0..255] of TarifaBPW
-//		xSemaphoreGive(framSem);
-//	}
-//	else
-//		return;
-////	if(aqui.traceflag & (1<<BOOTD))
-////	{
-////		for (int a=0;a<24;a++)
-////			printf("[BOOTD]H[%d]=%d ",a,diaTarifa[a]);
-////		printf("\n");
-////
-////	}
-//}
 
 static void init_fram()
 {
 	scratchTypespi scratch;
+
 	// FRAM Setup
-	fram.begin(FMOSI,FMISO,FCLK,FCS,&framSem); //will create SPI channel and Semaphore
-	//framWords=fram.intframWords;
+
 	spi_flash_init();
 
+	framFlag=fram.begin(FMOSI,FMISO,FCLK,FCS,&framSem); //will create SPI channel and Semaphore
 
+	if(framFlag)
+	{
+//		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+//		{
+//			fram.read_recover(&scratch);
+//			xSemaphoreGive(framSem);
+//		}
 
-		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
-		{
-			fram.read_recover(&scratch);
-			xSemaphoreGive(framSem);
-		}
-
-		if (scratch.medidor.state!=0)
-		{
-			//  check_log_file(); //Our log file. Need to open it before normal sequence
-			printf("Recover Fram\n");
-			recover_fram();
-			//recf=true;
-		}
+//		if (scratch.medidor.state!=0)
+//		{
+//			printf("Recover Fram\n");
+//			recover_fram();
+//		}
 		//all okey in our Fram after this point
 
 		//load all devices counters from FRAM
 		for (int a=0;a<MAXDEVS;a++)
 			load_from_fram(a);
-
+	}
 }
 
 static void wifi_init(void)
@@ -458,7 +611,6 @@ cJSON *makeCmdcJSON(meterType *meter)
 	cJSON_AddNumberToObject(cmdJ,"Transactions",	++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
 	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
 	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
-	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
 	cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
 	cJSON_AddNumberToObject(cmdJ,"macn",			theMacNum);
 
@@ -475,7 +627,6 @@ cJSON* makecJSONMeter(meterType *meter)
 		return NULL;
 	}
 
-//	cJSON *cmdJ=cJSON_CreateObject();
 	cJSON *cmdJ=makeCmdcJSON(meter);
 	cJSON *ar = cJSON_CreateArray();
 
@@ -485,17 +636,32 @@ cJSON* makecJSONMeter(meterType *meter)
 		return;
 	}
 
-//	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
-//	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
-//	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
-//	cJSON_AddNumberToObject(cmdJ,"Transactions",	++meter->vanMqtt);
-//	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
-//	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
-//	cJSON_AddNumberToObject(cmdJ,"Pulse",			meter->pulse);
 	cJSON_AddItemToArray(ar, cmdJ);
-
 	cJSON_AddItemToObject(root, "Batch",ar);
 	return root;
+}
+
+cJSON * makeGroupCmdAll()
+{
+
+	/////// Create Message for Grouped Cmds ///////////////////
+			cJSON *root=cJSON_CreateObject();
+			if(root==NULL)
+			{
+				printf("cannot create nroot\n");
+				return NULL;
+			}
+			esp_efuse_mac_get_default(them);
+			double dmac=(double)theMacNum;
+			cJSON *ar = cJSON_CreateArray();
+
+			for (int a=0;a<MAXDEVS;a++)
+			{
+				cJSON *cmdInt=makeCmdcJSON(&theMeters[a]);
+				cJSON_AddItemToArray(ar, cmdInt);
+			}
+			cJSON_AddItemToObject(root, "Batch",ar);
+			return root;
 }
 
 cJSON * makeGroupCmd(meterType *pmeter)
@@ -515,10 +681,7 @@ cJSON * makeGroupCmd(meterType *pmeter)
 				return NULL;
 			}
 			esp_efuse_mac_get_default(them);
-		//	memcpy(&theMacNum,&them[2],4);
-		//	printf("Mac %d\n",theMacNum);
 			double dmac=(double)theMacNum;
-		//	sprintf(theMac,"%02x:%02x:%02x:%02x:%02x:%02x",them[0],them[1],them[2],them[3],them[4],them[5]);
 			cJSON *ar = cJSON_CreateArray();
 			cJSON *cmdJ=cJSON_CreateObject();
 			cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
@@ -527,7 +690,6 @@ cJSON * makeGroupCmd(meterType *pmeter)
 			cJSON_AddNumberToObject(cmdJ,"Transactions",	++theMeters[pmeter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
 			cJSON_AddNumberToObject(cmdJ,"KwH",				pmeter->curLife);
 			cJSON_AddNumberToObject(cmdJ,"Beats",			pmeter->currentBeat);
-			cJSON_AddNumberToObject(cmdJ,"Pulse",			pmeter->pulse);
 			cJSON_AddNumberToObject(cmdJ,"Pos",				pmeter->pos);
 			cJSON_AddNumberToObject(cmdJ,"macn",			dmac);
 
@@ -539,8 +701,6 @@ cJSON * makeGroupCmd(meterType *pmeter)
 			//////////////  test if something else in Queue and send them all //////////////////
 			if(uxQueueMessagesWaiting(mqttR)>0)
 			{
-
-				printf("Execute waiting in Queue %d\n",uxQueueMessagesWaiting(mqttR));
 				while(uxQueueMessagesWaiting(mqttR)>0)
 				{
 					if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
@@ -554,13 +714,12 @@ cJSON * makeGroupCmd(meterType *pmeter)
 					}
 				}
 			}
-
 			cJSON_AddItemToObject(root, "Batch",ar);
 			return root;
 }
 
 
-void sendMsg(uint8_t *lmessage, uint8_t *donde)
+int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 {
     int waitTime;
 	ip_addr_t 						remote;
@@ -575,12 +734,13 @@ void sendMsg(uint8_t *lmessage, uint8_t *donde)
 		gsock=-1;
 		if(esp_wifi_connect()==ESP_OK)
 		{
-			printf("Stablish conn\n");
+			if(theConf.traceflag & (1<<MSGD))
+				printf("%sStablish conn\n",MSGDT);
 			EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS);
 			if ((uxBits & WIFI_BIT)!=WIFI_BIT)
 			{
 			//	printf("Failed wait\n");// wait for connection
-				return;
+				return -1;
 			}
 			conn=true;
 
@@ -602,19 +762,24 @@ void sendMsg(uint8_t *lmessage, uint8_t *donde)
 				gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
 				if (gsock < 0) {
 					printf( "Unable to create socket: errno %d\n", errno);
+					return -1;
 
 				}
-			   printf("Socket %d created, connecting to %s:%d\n",gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
+				if(theConf.traceflag & (1<<MSGD))
+					printf("%sSocket %d created, connecting to %s:%d\n",MSGDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
 
 				err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 				if (err != 0) {
-					printf( "Socket unable to connect: errno %d\n", errno);
+					if(theConf.traceflag & (1<<MSGD))
+						printf( "%sSocket unable to connect: errno %d\n",MSGDT, errno);
+					return -1;
 					}
 		}
 	    else
 	    {
-	    	printf("Could not esp_connect\n");
-	    	return;
+			if(theConf.traceflag & (1<<MSGD))
+				printf("%sCould not esp_connect\n",MSGDT);
+			return -1;
 	    }
 	}
 		do
@@ -624,34 +789,39 @@ void sendMsg(uint8_t *lmessage, uint8_t *donde)
 
 		delay(waitTime);// let OTHER meterclients have a chance based on randomness
 
-	//	if(deb)
-			printf("Sending queue %s\n",lmessage);
+		if(theConf.traceflag & (1<<MSGD))
+			printf("%sSending queue %s\n",MSGDT,lmessage);
 
-             err = send(gsock, lmessage, strlen(lmessage), 0);
-            if (err < 0) {
-               printf( "Sock %d Error occurred during sending: errno %d\n",gsock, errno);
-               conn=false;
-               	 return;
-            }
+		 err = send(gsock, lmessage, strlen(lmessage), 0);
+		 if (err < 0) {
+			if(theConf.traceflag & (1<<MSGD))
+				printf( "%sSock %d Error occurred during sending: errno %d\n",MSGDT,gsock, errno);
+		   conn=false;
+		   return -1;
+		}
 
-            	to.tv_sec = 2;
-                to.tv_usec = 0;
+		to.tv_sec = 2;
+		to.tv_usec = 0;
 
-                if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
+		if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
 
-                {
-                    printf("Unable to set read timeout on socket!\n");
-          //         return;
-                    vTaskDelete(NULL);
-                }
-            int len = recv(gsock, donde, 500, 0);
+		{
+			if(theConf.traceflag & (1<<MSGD))
+				printf("Unable to set read timeout on socket!\n");
+			return -1;
+		}
 
-		printf("Leaving sendmsg\n");
+		int len = recv(gsock, donde, maxx, 0);
+
+        if(theConf.traceflag & (1<<MSGD))
+        	printf("%sSendmsg succesfull\n",MSGDT);
+
+        return len;
+
      //   shutdown(gsock, 0);
     //    close(gsock);
 	//	delay(100);
 	//	esp_wifi_disconnect();
-
 }
 
 
@@ -681,18 +851,13 @@ void logIn()
 	cJSON_AddItemToObject(root, "Batch",ar);
 
 	char *logMsg=cJSON_Print(root);
-//	memset(tempb,0,1000);
-//    if (!cJSON_PrintPreallocated(root, tempb, 1000, 1)) {
-//printf("fail \n");
-//    }
 
-	sendMsg((uint8_t*)logMsg,(uint8_t*)&loginData);
-//	sendMsg((uint8_t*)tempb,(uint8_t*)&loginData);
+	sendMsg((uint8_t*)logMsg,(uint8_t*)&loginData, sizeof(loginData));
 
 	updateDateTime(loginData);
 
-	if(deb)
-		printf("Login year %d month %d day %d hour %d Tariff %d\n",yearg,mesg,diag,horag,loginData.theTariff);
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sLogin year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);
 
 	free(logMsg);
 	cJSON_Delete(root);
@@ -700,28 +865,59 @@ void logIn()
 
 }
 
+void sendStatusMeterAll()
+{
+    loginT 	loginData;
+    int sendStatus;
+
+	gpio_set_level((gpio_num_t)WIFILED, 1);
+
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sSendM %d Heap %d wait %d... ",CMDDT,++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
+	fflush(stdout);
+	cJSON *root=makeGroupCmdAll();
+	char *lmessage=cJSON_Print(root);
+	sendStatus=sendMsg((uint8_t*)lmessage,(uint8_t*)&loginData,sizeof(loginData));
+	if(sendStatus>=0)
+		updateDateTime(loginData);
+	if(lmessage)
+		free(lmessage);
+	if(root)
+		cJSON_Delete(root);
+
+	if(theConf.traceflag & (1<<CMDD))
+	{
+		printf("%sSendMeterFram dates year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);
+		printf("%sTar %d sent Heap %d\n",CMDDT,loginData.theTariff,esp_get_free_heap_size());
+	}
+	gpio_set_level((gpio_num_t)WIFILED, 0);
+}
 
 void sendStatusMeter(meterType* meter)
 {
     loginT 	loginData;
     meterType lmeter;
+    int sendStatus;
+
 	gpio_set_level((gpio_num_t)WIFILED, 1);
 
-	printf("SendM %d Heap %d wait %d... ",++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
+	if(theConf.traceflag & (1<<CMDD))
+		printf("%sSendM %d Heap %d wait %d... ",CMDDT,++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
 	fflush(stdout);
 	cJSON *root=makeGroupCmd(meter);
 	char *lmessage=cJSON_Print(root);
-	sendMsg((uint8_t*)lmessage,(uint8_t*)&loginData);
-	updateDateTime(loginData);
+	sendStatus=sendMsg((uint8_t*)lmessage,(uint8_t*)&loginData,sizeof(loginData));
+	if(sendStatus>=0)
+		updateDateTime(loginData);
 	free(lmessage);
 	cJSON_Delete(root);
 
-	if(deb)
-		printf("SendMeterFram dates year %d month %d day %d hour %d Tariff %d\n",yearg,mesg,diag,horag,loginData.theTariff);
-
-	printf("Tar %d sent Heap %d\n",loginData.theTariff,esp_get_free_heap_size());
+	if(theConf.traceflag & (1<<CMDD))
+	{
+		printf("%sSendMeterFram dates year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);
+		printf("%sTar %d sent Heap %d\n",CMDDT,loginData.theTariff,esp_get_free_heap_size());
+	}
 	gpio_set_level((gpio_num_t)WIFILED, 0);
-
 }
 
 #ifdef SENDER
@@ -798,7 +994,7 @@ void sendStatusNow(meterType* meter)
 }
 #endif
 
-
+#ifdef SENDER
 static void mqttManager(void* arg)
 {
 	meterType meter;
@@ -816,7 +1012,7 @@ static void mqttManager(void* arg)
 	}
 }
 
-#ifdef SENDER
+
 void sender(void *pArg)
 {
 	meterType algo;
@@ -876,18 +1072,84 @@ void sender(void *pArg)
 	}
 
 
+	int cmdfromstring(string key)
+	{
+	    for (int i=0; i <NKEYS; i++)
+	    {
+	    	string s1=string(lookuptable[i]);
+	    	if(strstr(s1.c_str(),key.c_str())!=NULL)
+	            return i;
+	    }
+	    return -1;
+	}
+
+	void test_write(uint8_t meter, volatile const uint32_t val)
+	{
+		uint32_t volatile valr,valr1,valr2,valr3,valr4,valr5,valr6,valr7,valr8;
+
+		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+			{
+			printf("Fram Write Meter %d Year %d Month %d Day %d Hour %d Value %d\n",meter,yearg,mesg,diag,horag,val);
+
+				fram.write_beat(meter,val);
+				delay(100);
+				fram.write_lifekwh(meter,val);
+				delay(100);
+				fram.write_month(meter,0,val);
+				delay(100);
+				fram.write_monthraw(meter,0,val);
+				delay(100);
+				fram.write_day(meter,2019,0,0,val);
+				delay(100);
+				fram.write_dayraw(meter,2019,0,0,val);
+				delay(100);
+				fram.write_hour(meter,2019,0,0,0,val);
+				delay(100);
+				fram.write_hourraw(meter,2019,0,0,0,val);
+				fram.write_lifedate(meter,val);
+				xSemaphoreGive(framSem);
+
+				printf("Load meter %d\n",meter);
+					load_from_fram(meter);
+//				valr=0;
+//				df=true;
+//				printf("Reading now\n");
+//				fram.read_lifekwh(meter,(uint8_t*)&valr);
+//				fram.read_beat(meter,(uint8_t*)&valr1);
+//				fram.read_month(meter,mesg,(uint8_t*)&valr2);
+//				fram.read_monthraw(meter,mesg,(uint8_t*)&valr3);
+//				fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr4);
+//				fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr5);
+//				fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr6);
+//				fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr7);
+//				fram.read_lifedate(meter,(uint8_t*)&valr8);  //should be down after scratch record???
+//
+//				printf("LifeKwh[%d]=%d\n",meter,valr);
+//				printf("Beat[%d]=%d\n",meter,valr1);
+//				printf("Month[%d]=%d\n",meter,valr2);
+//				printf("MonthRaw[%d]=%d\n",meter,valr3);
+//				printf("Day[%d]=%d\n",meter,valr4);
+//				printf("DayRaw[%d]=%d\n",meter,valr5);
+//				printf("Hour[%d]=%d\n",meter,valr6);
+//				printf("HourRaw[%d]=%d\n",meter,valr7);
+//				printf("LifeDate[%d]=%d\n",meter,valr8);
+			}
+
+	}
+
 	void kbd(void *arg) {
-		int len,ret,cualf,total;
+		int len,ret,cualf,total,a;
 		uart_port_t uart_num = UART_NUM_0 ;
-		char s1[20];
+		char s1[20],s2[20],lastcmd=0;
 		char data[20];
 		u32 framAddress;
 		u8 fueron,valor;
 		u8 *p;
-
+		string ss;
+		u32 tots=0;
 
 		uart_config_t uart_config = {
-				.baud_rate = 115200,
+				.baud_rate = 460800,
 				.data_bits = UART_DATA_8_BITS,
 				.parity = UART_PARITY_DISABLE,
 				.stop_bits = UART_STOP_BITS_1,
@@ -906,8 +1168,46 @@ void sender(void *pArg)
 			len = uart_read_bytes((uart_port_t)uart_num, (uint8_t*)data, sizeof(data),20);
 			if(len>0)
 			{
+				if(data[0]==10)
+					data[0]=lastcmd;
+				lastcmd=data[0];
+
 				switch(data[0])
 				{
+				case '+':
+					printf("TestWrite Meter:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+							break;
+					}
+					fueron=atoi(s1);
+					printf("Value:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+							break;
+					}
+					valor=atoi(s1);
+					test_write(fueron,valor);
+					break;
+				case 'c':
+					case 'C':
+						tots=0;
+						for (int a=0;a<MAXDEVS;a++)
+						{
+							if(theMeters[a].currentBeat>0)
+							{
+								tots+=theMeters[a].currentBeat;
+								printf("%sMeter[%d]=%s Beats %d kWh %d\n",YELLOW,a,RESETC,theMeters[a].currentBeat,theMeters[a].curLife);
+							}
+						}
+						printf("%sTotal Pulses rx=%s %d (%s)\n",RED,RESETC,totalPulses,tots==totalPulses?"Ok":"No");
+						break;
 				case 'q':
 				case 'Q':
 					printf("Queue Wait(%d):",waitQueue);
@@ -938,8 +1238,14 @@ void sender(void *pArg)
 						printf("\n");
 						break;
 					}
-					fram.format(atoi(s1),tempb,sizeof(tempb),true);
-					printf("Format done\n");
+			//		lbuf=(u8*)malloc(1000);
+				//	if(lbuf){
+						fram.format(atoi(s1),NULL,1000,true);
+						printf("Format done\n");
+					//	free(lbuf);
+						for(int a=0;a<MAXDEVS;a++)
+							load_from_fram(a);
+				//	}
 					break;
 				case 'r':
 				case 'R':
@@ -1187,6 +1493,62 @@ void sender(void *pArg)
 						printf("TotalMsg[%d] sent msgs %d\n",a,totalMsg[a]);
 					printf("Controller Total %d\n",sentTotal);
 					break;
+				case 'v':
+				case 'V':{
+					printf("Trace Flags ");
+					for (int a=0;a<NKEYS/2;a++)
+						if (theConf.traceflag & (1<<a))
+						{
+							if(a<(NKEYS/2)-1)
+								printf("%s-",lookuptable[a]);
+							else
+								printf("%s",lookuptable[a]);
+						}
+					printf("\nEnter TRACE FLAG:");
+					fflush(stdout);
+					memset(s1,0,sizeof(s1));
+					get_string((uart_port_t)uart_num,10,s1);
+					memset(s2,0,sizeof(s2));
+					for(a=0;a<strlen(s1);a++)
+						s2[a]=toupper(s1[a]);
+					ss=string(s2);
+					if(strlen(s2)<=1)
+						break;
+					if(strcmp(ss.c_str(),"NONE")==0)
+					{
+						theConf.traceflag=0;
+						write_to_flash();
+						break;
+					}
+					if(strcmp(ss.c_str(),"ALL")==0)
+					{
+						theConf.traceflag=0xFFFF;
+						write_to_flash();
+						break;
+					}
+					cualf=cmdfromstring((char*)ss.c_str());
+					if(cualf<0)
+					{
+						printf("Invalid Debug Option\n");
+						break;
+					}
+					if(cualf<NKEYS/2 )
+					{
+						printf("Debug Key %s added\n",lookuptable[cualf]);
+						theConf.traceflag |= 1<<cualf;
+						write_to_flash();
+						break;
+					}
+					else
+					{
+						cualf=cualf-NKEYS/2;
+						printf("Debug Key %s removed\n",lookuptable[cualf]);
+						theConf.traceflag ^= (1<<cualf);
+						write_to_flash();
+						break;
+					}
+
+					}
 				default:
 					break;
 				}
@@ -1224,7 +1586,8 @@ void sender(void *pArg)
 		printf("Centinel %x\n",theConf.centinel);
 	}
 
-void framManager(void * pArg)
+/*
+	void framManager(void * pArg)
 {
 	framMeterType theMeter;
 
@@ -1239,7 +1602,8 @@ void framManager(void * pArg)
 					if( xQueueReceive( framQ, &theMeter, 500/  portTICK_RATE_MS ))
 					{
 						write_to_fram(theMeter.whichMeter,theMeter.addit);
-						printf("Saving Meter %d add %d\n",theMeter.whichMeter,theMeter.addit);
+						if(theConf.traceflag & (1<<FRAMD))
+							printf("%sSaving Meter %d add %d\n",FRAMDT,theMeter.whichMeter,theMeter.addit);
 					}
 				}
 				xSemaphoreGive(framSem);
@@ -1248,75 +1612,164 @@ void framManager(void * pArg)
 		delay(400);
 	}
 }
+*/
 
-void app_main()
+void framManager(void * pArg)
 {
-	ESP_LOGI(TAG, "[APP] Startup..");
-    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+	framMeterType theMeter;
 
-    esp_log_level_set("*", ESP_LOG_WARN);
+	while(true)
+	{
+		if( xQueueReceive( framQ, &theMeter, portMAX_DELAY/  portTICK_RATE_MS ))
+		{
+			if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+			{
+				write_to_fram(theMeter.whichMeter,theMeter.addit);
+				if(theConf.traceflag & (1<<FRAMD))
+					printf("%sSaving Meter %d add %d\n",FRAMDT,theMeter.whichMeter,theMeter.addit);
+				xSemaphoreGive(framSem);
+			}
+		}
+		else
+		{
+			if(theConf.traceflag & (1<<FRAMD))
+				printf("%sFailed framQ Manager\n",FRAMDT);
+			delay(1000);
+		}
+	}
+}
 
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
-        // NVS partition was truncated and needs to be erased
-        // Retry nvs_flash_init
-    	printf("No free pages erased!!!!\n");
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-    }
-	read_flash();
-    if (theConf.centinel!=CENTINEL || !gpio_get_level((gpio_num_t)0))
-    	{
-    		printf("Read centinel %x",theConf.centinel);
-    		erase_config();
-    	}
+void init_vars()
+{
+	   deb=false;
+	   qwait=QDELAY;
+	   qdelay=qwait*1000;
+	   sendTcp=waitQueue=500;
+	   wDelay=TIMEWAITPCNT;
+	   wifiSem= xSemaphoreCreateBinary();
+	   xSemaphoreGive(wifiSem);
+	   diaHoraTarifa=100;// div by zero if not and not loaded
 
+	   mqttQ = xQueueCreate( 20, sizeof( meterType ) );
+	   if(!mqttQ)
+		   printf("Failed queue Tx\n");
 
-   deb=false;
-   qwait=QDELAY;
-   qdelay=qwait*1000;
-   sendTcp=waitQueue=500;
+		mqttR = xQueueCreate( 20, sizeof( meterType ) );
+		if(!mqttR)
+			printf("Failed queue Rx\n");
 
-   wifiSem= xSemaphoreCreateBinary();
-   xSemaphoreGive(wifiSem);
+		framQ = xQueueCreate( 20, sizeof( framMeterType ) );
+		if(!framQ)
+			printf("Failed queue Fram\n");
 
-   mqttQ = xQueueCreate( 20, sizeof( meterType ) );
-   if(!mqttQ)
-	   printf("Failed queue Tx\n");
+		strcpy(lookuptable[0],"BOOTD");
+		strcpy(lookuptable[1],"WIFID");
+		strcpy(lookuptable[2],"MQTTD");
+		strcpy(lookuptable[3],"PUBSUBD");
+		strcpy(lookuptable[4],"OTAD");
+		strcpy(lookuptable[5],"CMDD");
+		strcpy(lookuptable[6],"WEBD");
+		strcpy(lookuptable[7],"GEND");
+		strcpy(lookuptable[8],"MQTTT");
+		strcpy(lookuptable[9],"FRMCMD");
+		strcpy(lookuptable[10],"INTD");
+		strcpy(lookuptable[11],"FRAMD");
+		strcpy(lookuptable[12],"MSGD");
 
-	mqttR = xQueueCreate( 20, sizeof( meterType ) );
-	if(!mqttR)
-		printf("Failed queue Rx\n");
+		string debugs;
 
-	framQ = xQueueCreate( 20, sizeof( framMeterType ) );
-	if(!framQ)
-		printf("Failed queue Fram\n");
+		// add - sign to Keys
+		for (int a=0;a<NKEYS/2;a++)
+		{
+			debugs="-"+string(lookuptable[a]);
+			strcpy(lookuptable[a+NKEYS/2],debugs.c_str());
+		}
+}
 
-	memset(&theMeters,0,sizeof(theMeters));
-
-   wifi_init();
-   init_fram();
-   install_meter_interrupts();
-   xTaskCreate(&mqttManager,"meters",4096,NULL, 5, NULL);
-#ifdef SENDER
-   xTaskCreate(&submode,"U571",10240,NULL, 5, NULL);
-   delay(1000);
-   xTaskCreate(&sender,"sender",4096,NULL, 5, NULL);
-#endif
-#ifdef TEST
-	xTaskCreate(&kbd,"kbd",4096,NULL, 4, NULL);
-#endif
-
-//get time from host and set local time for any time related work
+void check_boot_options()
+{
 	char them[6];
-
-
 
 	esp_efuse_mac_get_default(them);
 	memcpy(&theMacNum,&them[2],4);
 	sprintf(theMac,"%02x:%02x:%02x:%02x:%02x:%02x",them[0],them[1],them[2],them[3],them[4],them[5]);
-	logIn();
-	xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);
+
+	if(theConf.traceflag & (1<<BOOTD))
+	    printf("%s Manufacturer %04x Fram Id %04x Fram Size %d%s\n",MAGENTA,fram.manufID,fram.prodId,fram.intframWords,RESETC);
+
+	if((theConf.traceflag & (1<<BOOTD)) && fram.intframWords>0)
+	{
+		printf("%s=============== FRAM ===============%s\n",RED,YELLOW);
+		printf("FRAMDATE(%s%d%s)=%s%d%s\n",GREEN,FRAMDATE,YELLOW,CYAN,METERVER-FRAMDATE,RESETC);
+		printf("METERVER(%s%d%s)=%s%d%s\n",GREEN,METERVER,YELLOW,CYAN,FREEFRAM-METERVER,RESETC);
+		printf("FREEFRAM(%s%d%s)=%s%d%s\n",GREEN,FREEFRAM,YELLOW,CYAN,SCRATCH-FREEFRAM,RESETC);
+		printf("SCRATCH(%s%d%s)=%s%d%s\n",GREEN,SCRATCH,YELLOW,CYAN,SCRATCHEND-SCRATCH,RESETC);
+		printf("SCRATCHEND(%s%d%s)=%s%d%s\n",GREEN,SCRATCHEND,YELLOW,CYAN,TARIFADIA-SCRATCHEND,RESETC);
+		printf("TARIFADIA(%s%d%s)=%s%d%s\n",GREEN,TARIFADIA,YELLOW,CYAN,FINTARIFA-TARIFADIA,RESETC);
+		printf("FINTARIFA(%s%d%s)=%s%d%s\n",GREEN,FINTARIFA,YELLOW,CYAN,BEATSTART-FINTARIFA,RESETC);
+		printf("BEATSTART(%s%d%s)=%s%d%s\n",GREEN,BEATSTART,YELLOW,CYAN,LIFEKWH-BEATSTART,RESETC);
+		printf("LIFEKWH(%s%d%s)=%s%d%s\n",GREEN,LIFEKWH,YELLOW,CYAN,LIFEDATE-LIFEKWH,RESETC);
+		printf("LIFEDATE(%s%d%s)=%s%d%s\n",GREEN,LIFEDATE,YELLOW,CYAN,MONTHSTART-LIFEDATE,RESETC);
+		printf("MONTHSTART(%s%d%s)=%s%d%s\n",GREEN,MONTHSTART,YELLOW,CYAN,MONTHRAW-MONTHSTART,RESETC);
+		printf("MONTHRAW(%s%d%s)=%s%d%s\n",GREEN,MONTHRAW,YELLOW,CYAN,DAYSTART-MONTHRAW,RESETC);
+		printf("DAYSTART(%s%d%s)=%s%d%s\n",GREEN,DAYSTART,YELLOW,CYAN,DAYRAW-DAYSTART,RESETC);
+		printf("DAYRAW(%s%d%s)=%s%d%s\n",GREEN,DAYRAW,YELLOW,CYAN,HOURSTART-DAYRAW,RESETC);
+		printf("HOURSTART(%s%d%s)=%s%d%s\n",GREEN,HOURSTART,YELLOW,CYAN,HOURRAW-HOURSTART,RESETC);
+		printf("HOURRAW(%s%d%s)=%s%d%s\n",GREEN,HOURRAW,YELLOW,CYAN,DATAEND-HOURRAW,RESETC);
+		printf("DATAEND(%s%d%s)=%s%d%s\n",GREEN,DATAEND,YELLOW,CYAN,TOTALFRAM-DATAEND,RESETC);
+		printf("TOTALFRAM(%s%d%s) Devices %s%d%s\n",GREEN,TOTALFRAM,YELLOW,CYAN,TOTALFRAM/DATAEND,RESETC);
+		printf("%s=============== FRAM ===============%s\n",RED,RESETC);
+	}
+}
+
+void app_main()
+{
+    esp_log_level_set("*", ESP_LOG_WARN);
+
+	ESP_LOGI(TAG, "[APP] BuildClient starting up");
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
+
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES)
+    {
+		printf("No free pages erased!!!!\n");
+		ESP_ERROR_CHECK(nvs_flash_erase());
+		err = nvs_flash_init();
+    }
+
+	read_flash();				//our Configuration structure
+
+    if (theConf.centinel!=CENTINEL || !gpio_get_level((gpio_num_t)0))
+	{
+		printf("Read centinel %x",theConf.centinel);
+		erase_config();
+	}
+
+    init_vars();				// load initial vars
+ //   wifi_init(); 				// start the wifi
+    init_fram();				// start the Fram Driver and load our Meters
+    check_boot_options();		// see if we need to display boot stuff
+
+#ifdef SENDER
+    xTaskCreate(&mqttManager,"meters",4096,NULL, 5, NULL);
+    xTaskCreate(&submode,"U571",10240,NULL, 5, NULL);
+    delay(1000);
+    xTaskCreate(&sender,"sender",4096,NULL, 5, NULL);
+#endif
+#ifdef TEST
+	xTaskCreate(&kbd,"kbd",20480,NULL, 4, NULL);	//debuging only
+#endif
+
+	//logIn();					//we are MeterControllers need to login to our Host Controller. For order purposes
+
+  //  xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
+  //  pcnt_init();				// start receiving pulses
+
+//	xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		//in charge of saving meter activity to Fram
+//	xTaskCreate(&timeKeeper,"tmK",10240,NULL, 10, NULL);		// Due to Tariffs, we need to check hour,day and month changes
+
+//	for (int a=0;a<MAXDEVS;a++)
+//		load_from_fram(a);
 
 }

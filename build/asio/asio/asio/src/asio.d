@@ -13,17 +13,6 @@ asio/asio/src/asio.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
- /Users/rsn/esp/esp-idf/components/newlib/platform_include/time.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/time.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/machine/time.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/unistd.h \
- /Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/unistd.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/unistd.h \
- /Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/time.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/time.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/fcntl.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_default_fcntl.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stat.h \
@@ -136,8 +125,6 @@ asio/asio/src/asio.o: \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/service_registry.hpp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/mutex.hpp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/posix_mutex.hpp \
- /Users/rsn/esp/esp-idf/components/newlib/platform_include/pthread.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/pthread.h \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/scoped_lock.hpp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/impl/service_registry.hpp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/impl/executor.ipp \
@@ -353,28 +340,6 @@ asio/asio/src/asio.o: \
 /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/platform_include/time.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/time.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/machine/time.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/unistd.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/unistd.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/unistd.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/time.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/time.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/fcntl.h:
 
@@ -599,10 +564,6 @@ asio/asio/src/asio.o: \
 /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/mutex.hpp:
 
 /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/posix_mutex.hpp:
-
-/Users/rsn/esp/esp-idf/components/newlib/platform_include/pthread.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/pthread.h:
 
 /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/scoped_lock.hpp:
 

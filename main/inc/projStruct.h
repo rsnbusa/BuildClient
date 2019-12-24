@@ -14,36 +14,38 @@ typedef struct loginTarif{
 } loginT;
 
 typedef struct meterType{
+	 bool saveit,lowThresf;
 	 char serialNumber[20];
-	 uint8_t meterid,state,pos,pin,pinB;
-	 uint32_t timestamp,startConn,pulse;
-	 uint32_t currentBeat,oldbeat,vanMqtt;
-	 u16 elpin;
-	 bool saveit;
-	 u32 msNow, minamps,maxamps;
-	 u16 curMonth,curMonthRaw,curDay,curDayRaw,beatSave,beatSaveRaw;
-	 u8 curHour,cycleMonth,curHourRaw;
-	 u32 curLife,curCycle,lastKwHDate;
-	 u16 beatsPerkW,maxLoss;
-	 u32 livingPulse,livingCount,startTimePulse;
+	 u16 beatsPerkW,curMonth,curMonthRaw,curDay,curDayRaw;
+	 u32 curLife,curCycle,lastKwHDate,msNow, minamps,maxamps,currentBeat,vanMqtt,ampTime,beatSave;
+	 u8 curHour,cycleMonth,curHourRaw,pos,pin,pinB;
 } meterType;
 
 typedef struct config {
-    u32 	centinel;
-    time_t 	lastUpload,lastTime,preLastTime,bornDate[MAXDEVS],lastBootDate;
-    u16 	bootcount;
-    u16 	beatsPerKw[MAXDEVS];
-    u16 	bounce[MAXDEVS];
-    u16 	lastResetCode;
-    u32 	bornKwh[MAXDEVS];
-    u16 	diaDeCorte[MAXDEVS];
     bool 	corteSent[MAXDEVS];
-    u8 		breakers[MAXDEVS];
-    u16 	ssl;
-    u16 	traceflag; // to make it mod 16 for AES encryption
-    char 	meterName[MAXCHARS];
-    char 	medidor_id[MAXDEVS][MAXCHARS];
-    u8		statusSend;
+    char 	medidor_id[MAXDEVS][MAXCHARS],meterName[MAXCHARS];
+    time_t 	lastUpload,lastTime,preLastTime,bornDate[MAXDEVS],lastBootDate;
+    u16 	beatsPerKw[MAXDEVS],bootcount,bounce[MAXDEVS],diaDeCorte[MAXDEVS],lastResetCode;
+    u16 	ssl,traceflag; // to make it mod 16 for AES encryption
+    u32 	bornKwh[MAXDEVS],centinel;
+    u8 		breakers[MAXDEVS],statusSend;
 } config_flash;
+
+typedef struct framq{
+	int whichMeter;
+	bool addit;
+}framMeterType;
+
+typedef struct pcntev{
+    int unit;  // the PCNT unit that originated an interrupt
+    uint32_t status; // information on the event type that caused the interrupt
+} pcnt_evt_t;
+
+typedef enum displayModeType {DISPLAYPULSES,DISPLAYKWH,DISPLAYUSER,DISPLAYALL,DISPLAYALLK,DISPLAYAMPS,DISPLAYRSSI,DISPLAYNADA} displayModeType;
+typedef enum displayType {NODISPLAY,DISPLAYIT} displayType;
+typedef enum overType {NOREP,REPLACE} overType;
+typedef enum resetType {ONCE,TIMER,REPEAT,TIMEREPEAT} resetType;
+typedef enum sendType {NOTSENT,SENT} sendType;
+enum debugflags{BOOTD,WIFID,MQTTD,PUBSUBD,OTAD,CMDD,WEBD,GEND,MQTTT,FRMCMD,INTD,FRAMD,MSGD};
 
 #endif

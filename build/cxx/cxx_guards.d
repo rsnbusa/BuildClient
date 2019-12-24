@@ -45,9 +45,6 @@ cxx_guards.o: /Users/rsn/esp/esp-idf/components/cxx/cxx_guards.cpp \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_private/crosscore_int.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_timer.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/heap/include/esp_heap_caps.h \
@@ -154,12 +151,6 @@ cxx_guards.o: /Users/rsn/esp/esp-idf/components/cxx/cxx_guards.cpp \
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_timer.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/machine/types.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h:
 
