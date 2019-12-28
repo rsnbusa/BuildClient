@@ -17,7 +17,7 @@ typedef struct meterType{
 	 bool saveit,lowThresf;
 	 char serialNumber[20];
 	 u16 beatsPerkW,curMonth,curMonthRaw,curDay,curDayRaw;
-	 u32 curLife,curCycle,lastKwHDate,msNow, minamps,maxamps,currentBeat,vanMqtt,ampTime,beatSave;
+	 u32 curLife,curCycle,lastKwHDate,msNow, minamps,maxamps,currentBeat,vanMqtt,ampTime,beatSave,beatSaveRaw;
 	 u8 curHour,cycleMonth,curHourRaw,pos,pin,pinB;
 } meterType;
 
@@ -28,7 +28,7 @@ typedef struct config {
     u16 	beatsPerKw[MAXDEVS],bootcount,bounce[MAXDEVS],diaDeCorte[MAXDEVS],lastResetCode;
     u16 	ssl,traceflag; // to make it mod 16 for AES encryption
     u32 	bornKwh[MAXDEVS],centinel;
-    u8 		breakers[MAXDEVS],statusSend;
+    u8 		configured[MAXDEVS],active;
 } config_flash;
 
 typedef struct framq{
@@ -46,6 +46,16 @@ typedef enum displayType {NODISPLAY,DISPLAYIT} displayType;
 typedef enum overType {NOREP,REPLACE} overType;
 typedef enum resetType {ONCE,TIMER,REPEAT,TIMEREPEAT} resetType;
 typedef enum sendType {NOTSENT,SENT} sendType;
-enum debugflags{BOOTD,WIFID,MQTTD,PUBSUBD,OTAD,CMDD,WEBD,GEND,MQTTT,FRMCMD,INTD,FRAMD,MSGD};
+enum debugflags{BOOTD,WIFID,MQTTD,PUBSUBD,OTAD,CMDD,WEBD,GEND,MQTTT,FRMCMD,INTD,FRAMD,MSGD,TIMED};
+
+
+typedef struct internalHost{
+	char		meterid[20];
+	uint32_t	startKwh;
+	uint16_t	bpkwh;
+	uint16_t	diaCorte;
+	uint16_t	tariff;
+	bool		valid;
+}host_t;
 
 #endif

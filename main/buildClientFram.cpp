@@ -17,6 +17,8 @@ static EventGroupHandle_t 		wifi_event_group;
 u16                  			diaHoraTarifa,yearDay,llevoMsg=0,waitQueue=500,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
 u32								sentTotal=0,sendTcp=0,totalMsg[MAXDEVS],theMacNum,totalPulses;
 u8								qwait=0,theBreakers[MAXDEVS],daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
+host_t							setupHost[MAXDEVS];
+TaskHandle_t					webHandle;
 
 using namespace std;
 
@@ -26,6 +28,10 @@ void submode(void * pArg);
 
 void sendStatusMeter(meterType* meter);
 void sendStatusMeterAll();
+static esp_err_t challenge_get_handler(httpd_req_t *req);
+static esp_err_t setup_get_handler(httpd_req_t *req);
+static esp_err_t setupend_get_handler(httpd_req_t *req);
+
 
 uint32_t IRAM_ATTR millisISR()
 {
@@ -39,50 +45,50 @@ uint32_t IRAM_ATTR millis()
 
 void delay(uint32_t a)
 {
-	vTaskDelay(a /  portTICK_RATE_MS);
+	vTaskDelay(a /  portTICK_PERIOD_MS);
 }
 
 
 void hourChange()
 {
-	if(theConf.traceflag & (1<<CMDD))
-		printf("%sHour change Old %d New %d\n",CMDDT,oldHorag,horag);
+	if(theConf.traceflag & (1<<TIMED))
+		printf("%sHour change Old %d New %d\n",TIEMPOT,oldHorag,horag);
 
 
 	for (int a=0;a<MAXDEVS;a++)
 	{
-		if(theConf.traceflag & (1<<CMDD))
-			printf("%sHour change meter %d val %d\n",CMDDT,a,theMeters[a].curHour);
+		if(theConf.traceflag & (1<<TIMED))
+			printf("%sHour change meter %d val %d\n",TIEMPOT,a,theMeters[a].curHour);
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 			fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
 			fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
 			xSemaphoreGive(framSem);
 		}
-	//	sendStatusMeter(&theMeters[a]);
 		theMeters[a].curHour=0; //init it
 		theMeters[a].curHourRaw=0;
-		oldHorag=horag;
 	//	delay(500);
 	}
 	sendStatusMeterAll();
-
+	oldHorag=horag;
 }
 
 void dayChange()
 {
-	if(theConf.traceflag & (1<<CMDD))
-		printf("%sDay change Old %d New %d\n",CMDDT,oldDiag,diag);
+	if(theConf.traceflag & (1<<TIMED))
+		printf("%sDay change Old %d New %d\n",TIEMPOT,oldDiag,diag);
 
 
 	for (int a=0;a<MAXDEVS;a++)
 			{
-				if(theConf.traceflag & (1<<CMDD))
-					printf("%sDay change mes %d day %d oldday %d corte %d sent %d\n",CMDDT,oldMesg,diag,oldDiag,theConf.diaDeCorte[a],theConf.corteSent[a]);
+				if(theConf.traceflag & (1<<TIMED))
+					printf("%sDay change mes %d day %d oldday %d corte %d sent %d\n",TIEMPOT,oldMesg,diag,oldDiag,theConf.diaDeCorte[a],theConf.corteSent[a]);
 				if(xSemaphoreTake(framSem, portMAX_DELAY))
 				{
 					fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
+					fram. write_dayraw(a,yearg, oldMesg,oldDiag, theMeters[a].curDayRaw);
 					theMeters[a].curDay=0;
+					theMeters[a].curDayRaw=0;
 					xSemaphoreGive(framSem);
 				}
 			}
@@ -91,16 +97,18 @@ void dayChange()
 
 void monthChange()
 {
-	if(theConf.traceflag & (1<<CMDD))
-		printf("%sMonth change Old %d New %d\n",CMDDT,oldMesg,mesg);
+	if(theConf.traceflag & (1<<TIMED))
+		printf("%sMonth change Old %d New %d\n",TIEMPOT,oldMesg,mesg);
 
 	for (int a=0;a<MAXDEVS;a++)
 			{
 				if(xSemaphoreTake(framSem, portMAX_DELAY))
 				{
 					fram.write_month(a, oldMesg, theMeters[a].curMonth);
+					fram.write_monthraw(a, oldMesg, theMeters[a].curMonthRaw);
 					xSemaphoreGive(framSem);
 					theMeters[a].curMonth=0;
+					theMeters[a].curMonthRaw=0;
 				}
 			}
 			oldMesg=mesg;
@@ -114,16 +122,13 @@ void check_date_change()
 	localtime_r(&now,&timep);
 	mesg=timep.tm_mon;   // Global Month
 	diag=timep.tm_mday-1;    // Global Day
-	yearg=timep.tm_year;     // Global Year
+	yearg=timep.tm_year+1900;     // Global Year
 	horag=timep.tm_hour;     // Global Hour
 	yearDay=timep.tm_yday;
 
-	if(theConf.traceflag & (1<<CMDD))
-		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",CMDDT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
+	if(theConf.traceflag & (1<<TIMED))
+		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
 				timep.tm_min,timep.tm_sec,yearDay);
-
-	hourChange();
-	return;
 
 	if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
 		return;
@@ -149,14 +154,14 @@ static void timeKeeper(void *pArg)
 
 	time(&now);
 	int faltan=3600- (now % 3600)+2; //second to next hour +2 secs
-	if(theConf.traceflag & (1<<BOOTD))
-		printf("%sSecs to Hour %d now %d\n",BOOTDT,faltan,(u32)now);
+	if(theConf.traceflag & (1<<TIMED))
+		printf("%sSecs to Hour %d now %d\n",TIEMPOT,faltan,(u32)now);
 
 	delay(faltan*QUE);
 	while(true)
 	{
 		check_date_change();
-		delay(3600000);
+		delay(3600000);//every hour
 	}
 }
 
@@ -179,9 +184,9 @@ static void pcntManager(void * pArg)
 		if (res == pdTRUE)
 		{
 			pcnt_get_counter_value((pcnt_unit_t)evt.unit,(short int *) &count);
-			if(theConf.traceflag & (1<<INTD)){
+			if(theConf.traceflag & (1<<INTD))
 				printf("%sEvent PCNT unit[%d]; cnt: %d status %x\n",INTDT, evt.unit, count,evt.status);
-			}
+
 			if (evt.status & PCNT_EVT_THRES_1)
 			{
 				pcnt_counter_clear((pcnt_unit_t)evt.unit);
@@ -190,16 +195,17 @@ static void pcntManager(void * pArg)
 					timeDiff=millis()-theMeters[evt.unit].ampTime;
 				theMeters[evt.unit].ampTime=millis();
 
-				totalPulses+=count;
+				totalPulses+=count;						//counter of all pulses received
 
-				theMeters[evt.unit].saveit=false;
-				theMeters[evt.unit].currentBeat+=count;
-				theMeters[evt.unit].beatSave+=count;
+				theMeters[evt.unit].saveit=false;		//adding a new kwh flag
+				theMeters[evt.unit].currentBeat+=count;	//beat
+				theMeters[evt.unit].beatSave+=count;	//beats per kwh
+				theMeters[evt.unit].beatSaveRaw+=count;	//raw without tariff discount
 
 				if(diaHoraTarifa==0)
-					diaHoraTarifa=100;
+					diaHoraTarifa=100;					// should not happen but in case it does no crash
 
-				residuo=theMeters[evt.unit].beatSave % (theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100);
+				residuo=theMeters[evt.unit].beatSave % (theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100);	//0 is 1 kwh happend with tariffs
 
 				if(theConf.traceflag & (1<<INTD))
 					printf("%sResiduo %d Beat %d MeterPos %d Time %d BPK %d\n",INTDT,residuo,theMeters[evt.unit].currentBeat,
@@ -207,8 +213,9 @@ static void pcntManager(void * pArg)
 
 				if(residuo==0 && theMeters[evt.unit].currentBeat>0)
 				{
-					theMeters[evt.unit].saveit=true;
-					theMeters[evt.unit].beatSave-=theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100;
+					theMeters[evt.unit].saveit=true;	//add onw kwh
+					//theMeters[evt.unit].beatSave-=theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100; //should be 0? why this
+					theMeters[evt.unit].beatSave=0; //should be 0? why this
 				}
 				else
 					theMeters[evt.unit].saveit=false;
@@ -217,7 +224,7 @@ static void pcntManager(void * pArg)
 				{
 					theMeter.addit=residuo==0?1:0;
 					theMeter.whichMeter=evt.unit;
-					xQueueSend( framQ,&theMeter,0 );
+					xQueueSend( framQ,&theMeter,0 );	//dispathc it to the fram manager
 				}
 			}
         } else
@@ -250,6 +257,7 @@ static void pcnt_init(void)
 {
     pcnt_config_t pcnt_config;
     pcnt_isr_handle_t user_isr_handle = NULL; //user's ISR service handle
+    uint8_t fueron=0;
 
 	theMeters[0].pin=METER0;
 	theMeters[1].pin=METER1;
@@ -265,41 +273,49 @@ static void pcnt_init(void)
 
     memset((void*)&pcnt_config,0,sizeof(pcnt_config));
 
-	pcnt_config .ctrl_gpio_num 	= 0; // -1 DOES NOT work
-	pcnt_config .channel 		= PCNT_CHANNEL_0;
+	pcnt_config .ctrl_gpio_num 	= 0; 				// Dont need it but -1 DOES NOT work
+	pcnt_config .channel 		= PCNT_CHANNEL_0;	// signle channel
 	pcnt_config .pos_mode 		= PCNT_COUNT_INC;   // Count up on the positive edge
 	pcnt_config .neg_mode 		= PCNT_COUNT_DIS;   // Keep the counter value on the negative edge
-	pcnt_config .lctrl_mode 		= PCNT_MODE_KEEP; // Reverse counting direction if low
+	pcnt_config .lctrl_mode 	= PCNT_MODE_KEEP; 	// Reverse counting direction if low
 	pcnt_config .hctrl_mode 	= PCNT_MODE_KEEP;    // Keep the primary counter mode if high
 
     pcnt_isr_register(pcnt_intr_handler, NULL, 0,&user_isr_handle);
 
 	for(int a=0;a<MAXDEVS;a++)
 	{
-		pcnt_config.pulse_gpio_num = theMeters[a].pin;
-		pcnt_config.unit = (pcnt_unit_t)a;
-		pcnt_unit_config(&pcnt_config);
+		if(theConf.traceflag & (1<<INTD))
+			printf("%sMeter %d conf %d\n",INTDT,a,theConf.configured[a]);
+		if(theConf.configured[a]==3)  //Only Authenticated PINs
+		{
+			fueron++;
+			pcnt_config.pulse_gpio_num = theMeters[a].pin;
+			pcnt_config.unit = (pcnt_unit_t)a;
+			pcnt_unit_config(&pcnt_config);
 
-		theMeters[a].pos=a;
-		if(theMeters[a].beatsPerkW==0)
-			theMeters[a].beatsPerkW=800;
+			theMeters[a].pos=a;
+			if(theMeters[a].beatsPerkW==0)
+				theMeters[a].beatsPerkW=800;
 
-		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_H_LIM);
-		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_L_LIM);
-		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_THRES_0);
-		pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_ZERO);
+			pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_H_LIM);
+			pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_L_LIM);
+			pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_THRES_0);
+			pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_ZERO);
 
-		pcnt_set_filter_value((pcnt_unit_t)a, 1000);
-		pcnt_filter_enable((pcnt_unit_t)a);
+			pcnt_set_filter_value((pcnt_unit_t)a, 1000);
+			pcnt_filter_enable((pcnt_unit_t)a);
 
-		pcnt_set_event_value((pcnt_unit_t)a, PCNT_EVT_THRES_1, 10);// instead of a lot of code, just lose a most 10 beats
-		pcnt_event_enable((pcnt_unit_t)a, PCNT_EVT_THRES_1);
+			pcnt_set_event_value((pcnt_unit_t)a, PCNT_EVT_THRES_1, 10);// instead of a lot of code, just lose a most 10 beats
+			pcnt_event_enable((pcnt_unit_t)a, PCNT_EVT_THRES_1);
 
-		pcnt_counter_pause((pcnt_unit_t)a);
-		pcnt_counter_clear((pcnt_unit_t)a);
-		pcnt_intr_enable((pcnt_unit_t)a);
-		pcnt_counter_resume((pcnt_unit_t)a);
+			pcnt_counter_pause((pcnt_unit_t)a);
+			pcnt_counter_clear((pcnt_unit_t)a);
+			pcnt_intr_enable((pcnt_unit_t)a);
+			pcnt_counter_resume((pcnt_unit_t)a);
+		}
 	}
+	if(theConf.traceflag & (1<<INTD))
+		printf("%s%d Meters were activated\n",INTDT,fueron);
 }
 
 static void read_flash()
@@ -364,7 +380,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
 static void ip_event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
 {
-    switch (event_id) {
+
+   switch (event_id) {
         case IP_EVENT_STA_GOT_IP:
             xEventGroupSetBits(wifi_event_group, WIFI_BIT);
             break;
@@ -373,7 +390,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
     }
     return;
 }
-
+#ifdef RECOVER
 static void recover_fram()
 {
 	char textl[100];
@@ -410,11 +427,16 @@ static void recover_fram()
 			printf("%sRecover %s",FRAMDT,textl);
 	}
 }
+#endif
 
 static void write_to_fram(u8 meter,bool addit)
 {
 	time_t timeH;
     struct tm timeinfo;
+#ifdef RECOVER
+	scratchTypespi scratch;
+#endif
+	uint16_t mas;
 
     if(!framFlag)
     {
@@ -423,25 +445,32 @@ static void write_to_fram(u8 meter,bool addit)
 		return;
     }
 
-	// FRAM Semaphore is taken by the Interrupt Manager. Safe to work.
-	scratchTypespi scratch;
     time(&timeH);
 	localtime_r(&timeH, &timeinfo);
 	mesg=timeinfo.tm_mon;
 	diag=timeinfo.tm_mday-1;
 	yearg=timeinfo.tm_year+1900;
-	horag=timeinfo.tm_hour-1;
+	horag=timeinfo.tm_hour;
 
 	if(addit)
 	{
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("W_T_FRAM Year %d Month %d Day %d Hour %d\n",yearg,mesg,diag,horag);
 		theMeters[meter].curLife++;
 		theMeters[meter].curMonth++;
 		theMeters[meter].curDay++;
 		theMeters[meter].curHour++;
-		theMeters[meter].curCycle++;
+		if(theMeters[meter].beatSaveRaw>=theMeters[meter].beatsPerkW)
+		{
+			mas=theMeters[meter].beatSaveRaw / theMeters[meter].beatsPerkW;
+			theMeters[meter].curMonthRaw+=mas;
+			theMeters[meter].curDayRaw+=mas;
+			theMeters[meter].curHourRaw+=mas;
+			theMeters[meter].beatSaveRaw=theMeters[meter].beatSaveRaw % theMeters[meter].beatsPerkW; //not 0 else we lose beats that happend that we not recorded on time
+		}
 		time((time_t*)&theMeters[meter].lastKwHDate); //last time we saved data
 
-
+#ifdef RECOVER
 		scratch.medidor.state=1;                    //scratch written state. Must be 0 to be ok. Every 800-1000 beats so its worth it
 		scratch.medidor.meter=meter;
 		scratch.medidor.month=theMeters[meter].curMonth;
@@ -453,7 +482,8 @@ static void write_to_fram(u8 meter,bool addit)
 		scratch.medidor.diag=diag;
 		scratch.medidor.horag=horag;
 		scratch.medidor.yearg=yearg;
-	//	fram.write_recover(scratch);            //Power Failure recover register
+		fram.write_recover(scratch);            //Power Failure recover register
+#endif
 
 		fram.write_beat(meter,theMeters[meter].currentBeat);
 		fram.write_lifekwh(meter,theMeters[meter].curLife);
@@ -464,7 +494,10 @@ static void write_to_fram(u8 meter,bool addit)
 		fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
 		fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
 		fram.write_lifedate(meter,theMeters[meter].lastKwHDate);  //should be down after scratch record???
-	//	fram.write8(SCRATCH,0); //Fast write first byte of Scratch record to 0=done.
+#ifdef RECOVER
+		fram.write8(SCRATCH,0); //Fast write first byte of Scratch record to 0=done.
+#endif
+
 	}
 		else
 		{
@@ -475,10 +508,6 @@ static void write_to_fram(u8 meter,bool addit)
 
 void load_from_fram(u8 meter)
 {
-	volatile u16 a;
-	volatile u32 b;
-	volatile u8 c;
-
     if(!framFlag)
     {
 		if(theConf.traceflag & (1<<FRAMD))
@@ -488,42 +517,22 @@ void load_from_fram(u8 meter)
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
-		if (diaHoraTarifa==0)
-			diaHoraTarifa=100;
-	//	fram.read_lifekwh(meter,(u8*)&b);
 		fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
-		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-	//	fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
-		fram.read_lifedate(meter,(u8*)&b);
-		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-	//	fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
-		fram.read_month(meter, mesg, (u8*)&a);
-		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-	//	fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
-		fram.read_monthraw(meter, mesg, (u8*)&a);
-		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-	//	fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
-		fram.read_day(meter, yearg,mesg, diag, (u8*)&a);
-		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-	//	fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
-		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&a);
-	printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-//	fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
-	fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&c);
-	printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-//	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
-	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&c);
-	printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
-//	fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
-	fram.read_beat(meter,(u8*)&a);
+		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
+		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
+		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
+		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
+		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
+		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
+		fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
+		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
 		totalPulses+=theMeters[meter].currentBeat;
 		if(theConf.beatsPerKw[meter]==0)
 			theConf.beatsPerKw[meter]=800;// just in case div by 0 crash
-		if(theMeters[meter].beatsPerkW==0)
-			theMeters[meter].beatsPerkW=800;// just in case div by 0 crash
+		theMeters[meter].beatsPerkW=theConf.beatsPerKw[meter];// just in case div by 0 crash
 		u16 nada=theMeters[meter].currentBeat/theConf.beatsPerKw[meter];
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*theConf.beatsPerKw[meter]);
-		printf("Life[%d]=%d\n",meter,theMeters[meter].curLife);
+		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
 	xSemaphoreGive(framSem);
 
 		if(theConf.traceflag & (1<<FRAMD))
@@ -533,8 +542,9 @@ void load_from_fram(u8 meter)
 
 static void init_fram()
 {
+#ifdef RECOVER
 	scratchTypespi scratch;
-
+#endif
 	// FRAM Setup
 
 	spi_flash_init();
@@ -543,17 +553,19 @@ static void init_fram()
 
 	if(framFlag)
 	{
-//		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
-//		{
-//			fram.read_recover(&scratch);
-//			xSemaphoreGive(framSem);
-//		}
+#ifdef RECOVER
+		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+		{
+			fram.read_recover(&scratch);
+			xSemaphoreGive(framSem);
+		}
 
-//		if (scratch.medidor.state!=0)
-//		{
-//			printf("Recover Fram\n");
-//			recover_fram();
-//		}
+		if (scratch.medidor.state!=0)
+		{
+			printf("Recover Fram\n");
+			recover_fram();
+		}
+#endif
 		//all okey in our Fram after this point
 
 		//load all devices counters from FRAM
@@ -564,44 +576,93 @@ static void init_fram()
 
 static void wifi_init(void)
 {
-  //  tcpip_adapter_init();
-    esp_netif_init();
+	tcpip_adapter_ip_info_t 		ipInfo;
+	printf("%sWiFi Mode %s\n",BOOTDT,theConf.active?"RunConf":"SetupConf");
+	if(!theConf.active)
+	    tcpip_adapter_init();
+	else
+	    esp_netif_init();
 
-    wifi_event_group = xEventGroupCreate();
-    xEventGroupClearBits(wifi_event_group, WIFI_BIT);
+	esp_efuse_mac_get_default(them);
 
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-    esp_netif_create_default_wifi_sta();
+    //if imperative to change default 192.168.4.1 to anything else use below. Careful with esp_net_if deprecation warnings
+	if(!theConf.active)	{
+		memset(&ipInfo,0,sizeof(ipInfo));
+		//set IP Address of AP for Stations DHCP
+		ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
+		IP4_ADDR(&ipInfo.ip, 192,168,19,1);
+		IP4_ADDR(&ipInfo.gw, 192,168,19,1);
+		IP4_ADDR(&ipInfo.netmask, 255,255,255,0);
+		ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &ipInfo));
+		ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP));
+	}
 
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
+	    wifi_event_group = xEventGroupCreate();
+	    xEventGroupClearBits(wifi_event_group, WIFI_BIT);
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    wifi_config_t wifi_config;// = {
-    memset(&wifi_config,0,sizeof(wifi_config));//very important
-	strcpy((char*)wifi_config.sta.ssid,"Meteriot");
-	strcpy((char*)wifi_config.sta.password,"Meteriot");
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
-    esp_wifi_start();
+	    ESP_ERROR_CHECK(esp_event_loop_create_default());
+	    if(theConf.active)
+	    	esp_netif_create_default_wifi_sta();
+
+	    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+	    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
+
+	    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+
+	    wifi_config_t wifi_config;
+	    memset(&wifi_config,0,sizeof(wifi_config));//very important
+		if(theConf.active)
+	    {
+			strcpy((char*)wifi_config.sta.ssid,"Meteriot");
+			strcpy((char*)wifi_config.sta.password,"Meteriot");
+			ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+			esp_wifi_start();
+	    }
+
+	    //AP section
+		if(!theConf.active)
+	    {
+			memset(&wifi_config,0,sizeof(wifi_config));//very important
+			sprintf(tempb,"Meter%02x%02x",them[4],them[5]);
+			strcpy((char*)wifi_config.ap.ssid,tempb);
+			strcpy((char*)wifi_config.ap.password,"csttpstt");
+			wifi_config.ap.authmode=WIFI_AUTH_WPA_PSK;
+			wifi_config.ap.ssid_hidden=false;
+			wifi_config.ap.beacon_interval=400;
+			wifi_config.ap.max_connection=50;
+			wifi_config.ap.ssid_len=0;
+			wifi_config.ap.channel=1;
+			ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+			esp_wifi_start();
+	    }
 }
 
 void updateDateTime(loginT loginData)
 {
     struct tm timeinfo;
 
+	if(theConf.traceflag & (1<<FRMCMD))
+		printf("%sLogin Date %d Tariff %d\n",FRMCMDT,(int)loginData.thedate,loginData.theTariff);
+
 	localtime_r(&loginData.thedate, &timeinfo);
 	diaHoraTarifa=loginData.theTariff;// Host will give us Hourly Tariff. No need to store
 
+	if(theConf.traceflag & (1<<FRMCMD))
+	{
+		printf("%sYear %d Month %d Day %d Hour %d\n",FRMCMDT,timeinfo.tm_year+1900,timeinfo.tm_mon,timeinfo.tm_mday-1,timeinfo.tm_hour);
+	}
 	mesg=timeinfo.tm_mon;
-	diag=timeinfo.tm_mday;
+	diag=timeinfo.tm_mday-1;
 	yearg=timeinfo.tm_year+1900;
 	horag=timeinfo.tm_hour;
 	struct timeval now = { .tv_sec = loginData.thedate, .tv_usec=0};
 	settimeofday(&now, NULL);
 }
+
 cJSON *makeCmdcJSON(meterType *meter)
 {
 	cJSON *cmdJ=cJSON_CreateObject();
@@ -613,7 +674,6 @@ cJSON *makeCmdcJSON(meterType *meter)
 	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
 	cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
 	cJSON_AddNumberToObject(cmdJ,"macn",			theMacNum);
-
 	return cmdJ;
 }
 
@@ -651,10 +711,12 @@ cJSON * makeGroupCmdAll()
 				printf("cannot create nroot\n");
 				return NULL;
 			}
+
+			//already done at the beginning
 			esp_efuse_mac_get_default(them);
 			double dmac=(double)theMacNum;
-			cJSON *ar = cJSON_CreateArray();
 
+			cJSON *ar = cJSON_CreateArray();
 			for (int a=0;a<MAXDEVS;a++)
 			{
 				cJSON *cmdInt=makeCmdcJSON(&theMeters[a]);
@@ -682,6 +744,7 @@ cJSON * makeGroupCmd(meterType *pmeter)
 			}
 			esp_efuse_mac_get_default(them);
 			double dmac=(double)theMacNum;
+
 			cJSON *ar = cJSON_CreateArray();
 			cJSON *cmdJ=cJSON_CreateObject();
 			cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
@@ -735,45 +798,44 @@ int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 		if(esp_wifi_connect()==ESP_OK)
 		{
 			if(theConf.traceflag & (1<<MSGD))
-				printf("%sStablish conn\n",MSGDT);
+				printf("%sEstablish connect\n",MSGDT);
 			EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS);
 			if ((uxBits & WIFI_BIT)!=WIFI_BIT)
-			{
-			//	printf("Failed wait\n");// wait for connection
 				return -1;
-			}
+
 			conn=true;
 
 			ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
-			//    		printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
-			//    		printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
-			//    		printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
-				memcpy(&aca,&ip_info.gw,4);
-				IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
+			    	//	printf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+			    	//	printf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+			    	//	printf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
+			memcpy(&aca,&ip_info.gw,4);
+			IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
 
-				struct sockaddr_in dest_addr;
-				memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);
-				dest_addr.sin_family = AF_INET;
-				dest_addr.sin_port = htons(BDGHOSTPORT);
-				addr_family = AF_INET;
-				ip_protocol = IPPROTO_IP;
-			 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+			struct sockaddr_in dest_addr;
+			memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);
+			dest_addr.sin_family = AF_INET;
+			dest_addr.sin_port = htons(BDGHOSTPORT);
+			addr_family = AF_INET;
+			ip_protocol = IPPROTO_IP;
+		 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
 
-				gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
-				if (gsock < 0) {
-					printf( "Unable to create socket: errno %d\n", errno);
-					return -1;
+			gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
+			if (gsock < 0) {
+				printf( "Unable to create socket: errno %d\n", errno);
+				return -1;
 
-				}
+			}
+			if(theConf.traceflag & (1<<MSGD))
+				printf("%sSocket %d created, connecting to %s:%d\n",MSGDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
+
+			err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+			if (err != 0)
+			{
 				if(theConf.traceflag & (1<<MSGD))
-					printf("%sSocket %d created, connecting to %s:%d\n",MSGDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
-
-				err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-				if (err != 0) {
-					if(theConf.traceflag & (1<<MSGD))
-						printf( "%sSocket unable to connect: errno %d\n",MSGDT, errno);
-					return -1;
-					}
+					printf( "%sSocket unable to connect: errno %d\n",MSGDT, errno);
+				return -1;
+			}
 		}
 	    else
 	    {
@@ -781,47 +843,43 @@ int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 				printf("%sCould not esp_connect\n",MSGDT);
 			return -1;
 	    }
-	}
-		do
-		{
-			waitTime=rand() % 600;
-		} while (waitTime<200);
+	} //if conn
+	do
+	{
+		waitTime=rand() % 600;
+	} while (waitTime<150); //minimum 150
 
-		delay(waitTime);// let OTHER meterclients have a chance based on randomness
+	delay(waitTime);// let OTHER meterclients have a chance based on randomness
 
+	if(theConf.traceflag & (1<<MSGD))
+		printf("%sSending queue %s\n",MSGDT,lmessage);
+
+	 err = send(gsock, (char*)lmessage, strlen((char*)lmessage), 0);
+	 if (err < 0)
+	 {
 		if(theConf.traceflag & (1<<MSGD))
-			printf("%sSending queue %s\n",MSGDT,lmessage);
+			printf( "%sSock %d Error occurred during sending: errno %d\n",MSGDT,gsock, errno);
+	   conn=false;
+	   return -1;
+	}
 
-		 err = send(gsock, lmessage, strlen(lmessage), 0);
-		 if (err < 0) {
-			if(theConf.traceflag & (1<<MSGD))
-				printf( "%sSock %d Error occurred during sending: errno %d\n",MSGDT,gsock, errno);
-		   conn=false;
-		   return -1;
-		}
+	to.tv_sec = 2;
+	to.tv_usec = 0;
 
-		to.tv_sec = 2;
-		to.tv_usec = 0;
+	if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
 
-		if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
+	{
+		if(theConf.traceflag & (1<<MSGD))
+			printf("Unable to set read timeout on socket!\n");
+		return -1;
+	}
 
-		{
-			if(theConf.traceflag & (1<<MSGD))
-				printf("Unable to set read timeout on socket!\n");
-			return -1;
-		}
+	int len = recv(gsock, donde, maxx, 0);
 
-		int len = recv(gsock, donde, maxx, 0);
+	if(theConf.traceflag & (1<<MSGD))
+		printf("%sSendmsg successful %d\n",MSGDT,len);
 
-        if(theConf.traceflag & (1<<MSGD))
-        	printf("%sSendmsg succesfull\n",MSGDT);
-
-        return len;
-
-     //   shutdown(gsock, 0);
-    //    close(gsock);
-	//	delay(100);
-	//	esp_wifi_disconnect();
+	return len;
 }
 
 
@@ -855,6 +913,9 @@ void logIn()
 	sendMsg((uint8_t*)logMsg,(uint8_t*)&loginData, sizeof(loginData));
 
 	updateDateTime(loginData);
+	oldMesg=mesg;
+	oldDiag=diag;
+	oldHorag=horag;
 
 	if(theConf.traceflag & (1<<CMDD))
 		printf("%sLogin year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);
@@ -896,7 +957,6 @@ void sendStatusMeterAll()
 void sendStatusMeter(meterType* meter)
 {
     loginT 	loginData;
-    meterType lmeter;
     int sendStatus;
 
 	gpio_set_level((gpio_num_t)WIFILED, 1);
@@ -1083,9 +1143,71 @@ void sender(void *pArg)
 	    return -1;
 	}
 
+	void confStatus()
+	{
+	    struct tm timeinfo;
+		char strftime_buf[64];
+
+		localtime_r(&theConf.lastBootDate, &timeinfo);
+		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+		printf("Configuration BootCount %d LReset %x Date %s RunStatus[%s] Trace %x\n",theConf.bootcount,theConf.lastResetCode,strftime_buf,
+				theConf.active?"Run":"Setup",theConf.traceflag);
+
+		for (int a=0;a<MAXDEVS;a++)
+		{
+			localtime_r(&theConf.bornDate[a], &timeinfo);
+			strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+			printf("Meter[%d] Serial %s BPW %d Born %s BornkWh %d Corte %d\n",a,theConf.medidor_id[a],theConf.beatsPerKw[a],
+					strftime_buf,theConf.bornKwh[a],theConf.diaDeCorte[a]);
+		}
+	}
+
+	void meterStatus(uint8_t meter)
+	{
+		uint32_t valr;
+	    struct tm timeinfo;
+	    char strftime_buf[64];
+
+		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+			{
+				//printf("Meter Compare test Year %d Month %d Day %d Hour %d\n",yearg,mesg,diag,horag);
+				valr=0;
+				fram.read_lifekwh(meter,(uint8_t*)&valr);
+				printf("LifeKwh[%d]=%d %d\n",meter,valr,theMeters[meter].curLife);
+				valr=0;
+				fram.read_beat(meter,(uint8_t*)&valr);
+				printf("Beat[%d]=%d %d\n",meter,valr,theMeters[meter].currentBeat);
+				valr=0;
+				fram.read_month(meter,mesg,(uint8_t*)&valr);
+				printf("Month[%d]Mes[%d]=%d %d\n",meter,mesg,valr,theMeters[meter].curMonth);
+				valr=0;
+				fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
+				printf("MonthRaw[%d]Mes[%d]=%d %d\n",meter,mesg,valr,theMeters[meter].curMonthRaw);
+				valr=0;
+				fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
+				printf("Day[%d]Mes[%d]Dia[%d]=%d %d\n",meter,mesg,diag,valr,theMeters[meter].curDay);
+				valr=0;
+				fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
+				printf("DayRaw[%d]Mes[%d]Dia[%d]=%d %d\n",meter,mesg,diag,valr,theMeters[meter].curDayRaw);
+				valr=0;
+				fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+				printf("Hour[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHour);
+				valr=0;
+				fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+				printf("HourRaw[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHourRaw);
+				valr=0;
+				fram.read_lifedate(meter,(uint8_t*)&valr);  //should be down after scratch record???
+				printf("LifeDate[%d]=%d %d\n",meter,valr,theMeters[meter].lastKwHDate);
+				localtime_r(&valr, &timeinfo);
+				strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+				printf("LifDate %s\n",strftime_buf);
+				xSemaphoreGive(framSem);
+			}
+	}
+
 	void test_write(uint8_t meter, volatile const uint32_t val)
 	{
-		uint32_t volatile valr,valr1,valr2,valr3,valr4,valr5,valr6,valr7,valr8;
+		uint32_t valr;
 
 		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 			{
@@ -1109,30 +1231,26 @@ void sender(void *pArg)
 				fram.write_lifedate(meter,val);
 				xSemaphoreGive(framSem);
 
-				printf("Load meter %d\n",meter);
-					load_from_fram(meter);
-//				valr=0;
-//				df=true;
-//				printf("Reading now\n");
-//				fram.read_lifekwh(meter,(uint8_t*)&valr);
-//				fram.read_beat(meter,(uint8_t*)&valr1);
-//				fram.read_month(meter,mesg,(uint8_t*)&valr2);
-//				fram.read_monthraw(meter,mesg,(uint8_t*)&valr3);
-//				fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr4);
-//				fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr5);
-//				fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr6);
-//				fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr7);
-//				fram.read_lifedate(meter,(uint8_t*)&valr8);  //should be down after scratch record???
-//
-//				printf("LifeKwh[%d]=%d\n",meter,valr);
-//				printf("Beat[%d]=%d\n",meter,valr1);
-//				printf("Month[%d]=%d\n",meter,valr2);
-//				printf("MonthRaw[%d]=%d\n",meter,valr3);
-//				printf("Day[%d]=%d\n",meter,valr4);
-//				printf("DayRaw[%d]=%d\n",meter,valr5);
-//				printf("Hour[%d]=%d\n",meter,valr6);
-//				printf("HourRaw[%d]=%d\n",meter,valr7);
-//				printf("LifeDate[%d]=%d\n",meter,valr8);
+				valr=0;
+				printf("Reading now\n");
+				fram.read_lifekwh(meter,(uint8_t*)&valr);
+				printf("LifeKwh[%d]=%d\n",meter,valr);
+				fram.read_beat(meter,(uint8_t*)&valr);
+				printf("Beat[%d]=%d\n",meter,valr);
+				fram.read_month(meter,mesg,(uint8_t*)&valr);
+				printf("Month[%d]=%d\n",meter,valr);
+				fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
+				printf("MonthRaw[%d]=%d\n",meter,valr);
+				fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
+				printf("Day[%d]=%d\n",meter,valr);
+				fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
+				printf("DayRaw[%d]=%d\n",meter,valr);
+				fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+				printf("Hour[%d]=%d\n",meter,valr);
+				fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+				printf("HourRaw[%d]=%d\n",meter,valr);
+				fram.read_lifedate(meter,(uint8_t*)&valr);  //should be down after scratch record???
+				printf("LifeDate[%d]=%d\n",meter,valr);
 			}
 
 	}
@@ -1174,6 +1292,31 @@ void sender(void *pArg)
 
 				switch(data[0])
 				{
+				case '[':
+				case ']':
+					confStatus();
+					break;
+				case '-':
+					theConf.active=0;
+					memset(theConf.configured,0,sizeof(theConf.configured));
+					write_to_flash();
+					break;
+				case '=':
+					sendStatusMeterAll();
+					break;
+				case 'B':
+				case 'b':
+					printf("Status Meter:");
+					fflush(stdout);
+					len=get_string((uart_port_t)uart_num,10,s1);
+					if(len<=0)
+					{
+						printf("\n");
+						break;
+					}
+					fueron=atoi(s1);
+					meterStatus(fueron);
+					break;
 				case '+':
 					printf("TestWrite Meter:");
 					fflush(stdout);
@@ -1200,11 +1343,12 @@ void sender(void *pArg)
 						tots=0;
 						for (int a=0;a<MAXDEVS;a++)
 						{
-							if(theMeters[a].currentBeat>0)
-							{
+							//if(theMeters[a].currentBeat>0)
+							//{
 								tots+=theMeters[a].currentBeat;
-								printf("%sMeter[%d]=%s Beats %d kWh %d\n",YELLOW,a,RESETC,theMeters[a].currentBeat,theMeters[a].curLife);
-							}
+								printf("%sMeter[%d]=%s Beats %d kWh %d BPK %d\n",YELLOW,a,RESETC,theMeters[a].currentBeat,theMeters[a].curLife,
+										theMeters[a].beatsPerkW);
+							//}
 						}
 						printf("%sTotal Pulses rx=%s %d (%s)\n",RED,RESETC,totalPulses,tots==totalPulses?"Ok":"No");
 						break;
@@ -1586,34 +1730,6 @@ void sender(void *pArg)
 		printf("Centinel %x\n",theConf.centinel);
 	}
 
-/*
-	void framManager(void * pArg)
-{
-	framMeterType theMeter;
-
-	while(1)
-	{
-		while(uxQueueMessagesWaiting(framQ)>0)
-		{
-			if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
-			{
-				while(uxQueueMessagesWaiting(framQ)>0)
-				{
-					if( xQueueReceive( framQ, &theMeter, 500/  portTICK_RATE_MS ))
-					{
-						write_to_fram(theMeter.whichMeter,theMeter.addit);
-						if(theConf.traceflag & (1<<FRAMD))
-							printf("%sSaving Meter %d add %d\n",FRAMDT,theMeter.whichMeter,theMeter.addit);
-					}
-				}
-				xSemaphoreGive(framSem);
-			}
-		}
-		delay(400);
-	}
-}
-*/
-
 void framManager(void * pArg)
 {
 	framMeterType theMeter;
@@ -1626,7 +1742,7 @@ void framManager(void * pArg)
 			{
 				write_to_fram(theMeter.whichMeter,theMeter.addit);
 				if(theConf.traceflag & (1<<FRAMD))
-					printf("%sSaving Meter %d add %d\n",FRAMDT,theMeter.whichMeter,theMeter.addit);
+					printf("%sSaving Meter %d add %d Beats %d\n",FRAMDT,theMeter.whichMeter,theMeter.addit,theMeters[theMeter.whichMeter].currentBeat);
 				xSemaphoreGive(framSem);
 			}
 		}
@@ -1675,6 +1791,7 @@ void init_vars()
 		strcpy(lookuptable[10],"INTD");
 		strcpy(lookuptable[11],"FRAMD");
 		strcpy(lookuptable[12],"MSGD");
+		strcpy(lookuptable[13],"TIMED");
 
 		string debugs;
 
@@ -1722,9 +1839,233 @@ void check_boot_options()
 	}
 }
 
+static const httpd_uri_t setup = {
+    .uri       = "/setup",
+    .method    = HTTP_GET,
+    .handler   = setup_get_handler,
+	.user_ctx	= NULL
+};
+
+static esp_err_t setup_get_handler(httpd_req_t *req)
+{
+    char*  buf;
+    size_t buf_len;
+    int cualm=0;
+    time_t now;
+    struct tm timeinfo;
+    char strftime_buf[64];
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1)
+    {
+        buf = (char*)malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+        {
+            char param[32];
+            if (httpd_query_key_value(buf, "meter", param, sizeof(param)) == ESP_OK)
+            {
+            	 cualm=atoi(param);
+            	 sprintf(tempb,"[%s]Invalid Meter range %d",strftime_buf,cualm);
+            	 if (cualm>=MAXDEVS)
+            		 goto exit;
+            }
+            if (httpd_query_key_value(buf, "mid", param, sizeof(param)) == ESP_OK)
+            	 strcpy((char*)&setupHost[cualm].meterid,param);
+
+            if (httpd_query_key_value(buf, "kwh", param, sizeof(param)) == ESP_OK)
+            	 setupHost[cualm].startKwh=atoi(param);
+
+            if (httpd_query_key_value(buf, "bpk", param, sizeof(param)) == ESP_OK)
+            	 setupHost[cualm].bpkwh=atoi(param);
+
+            if (httpd_query_key_value(buf, "duedate", param, sizeof(param)) == ESP_OK)
+            	 setupHost[cualm].diaCorte=atoi(param);
+
+            if (httpd_query_key_value(buf, "tariff", param, sizeof(param)) == ESP_OK)
+            	 setupHost[cualm].tariff=atoi(param);
+        }
+        free(buf);
+    }
+
+    if(setupHost[cualm].bpkwh>0 && setupHost[cualm].diaCorte>0 && setupHost[cualm].startKwh>0 && setupHost[cualm].tariff>0 && strlen(setupHost[cualm].meterid)>0)
+    {
+		time(&now);
+		localtime_r(&now, &timeinfo);
+		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    	setupHost[cualm].valid=true;
+    	theConf.configured[cualm]=1; //in transit mode
+    	sprintf(tempb,"[%s]Meter:%d Id=%s kWh=%d BPK=%d Corte=%d Tariff=%d",strftime_buf,cualm,setupHost[cualm].meterid,setupHost[cualm].startKwh,setupHost[cualm].bpkwh,
+    			setupHost[cualm].diaCorte,setupHost[cualm].tariff);
+    }
+    else
+    {
+    	exit:
+    	setupHost[cualm].valid=false;
+        sprintf(tempb,"[%s]Invalid parameters",strftime_buf);
+    }
+
+	httpd_resp_send(req, tempb, strlen(tempb));
+
+    return ESP_OK;
+}
+
+static const httpd_uri_t challenge = {
+    .uri       = "/challenge",
+    .method    = HTTP_GET,
+    .handler   = challenge_get_handler,
+	.user_ctx	= NULL
+};
+
+static esp_err_t challenge_get_handler(httpd_req_t *req)
+{
+    char*  buf;
+    size_t buf_len;
+    int cualm,valor;
+    time_t now;
+    struct tm timeinfo;
+    char strftime_buf[64];
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1)
+    {
+		sprintf(tempb,"[%s]Invalid parameters",strftime_buf);
+        buf = (char*)malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+        {
+            char param[32];
+
+			if (httpd_query_key_value(buf, "challenge", param, sizeof(param)) == ESP_OK)
+			{
+				valor=atoi(param);
+				if (valor==654321)
+				{
+					for (int a=0;a<MAXDEVS;a++)
+					{
+						if(theConf.configured[a]==2)
+						{
+							theMeters[a].beatsPerkW=setupHost[a].bpkwh;
+							memcpy((void*)&theMeters[a].serialNumber,(void*)&setupHost[a].meterid,sizeof(theMeters[a].serialNumber));
+							theMeters[a].curLife=setupHost[a].startKwh;
+							time((time_t*)&theMeters[a].ampTime);
+
+							theConf.beatsPerKw[a]=setupHost[a].bpkwh;
+							memcpy(theConf.medidor_id[a],(void*)&setupHost[a].meterid,sizeof(theConf.medidor_id[cualm]));
+							time((time_t*)&theConf.bornDate[a]);
+							theConf.beatsPerKw[a]=setupHost[a].bpkwh;
+							theConf.bornKwh[a]=setupHost[a].startKwh;
+							theConf.diaDeCorte[a]=setupHost[a].tariff;
+							theConf.configured[a]=3;					//final status configured
+						}
+						else
+							theConf.configured[a]=0; //reset it
+					}
+					theConf.active=1;				// theConf is now ACTIVE and Certified
+					write_to_flash();
+					memset(&setupHost,0,sizeof(setupHost));
+
+
+					sprintf(tempb,"[%s]Meters were saved permanently",strftime_buf);
+				}
+				else
+					sprintf(tempb,"[%s]Invalid challenge",strftime_buf);
+			}
+			else
+				sprintf(tempb,"[%s]Missing challenge",strftime_buf);
+        }
+        free(buf);
+       }
+	httpd_resp_send(req, tempb, strlen(tempb));
+
+    return ESP_OK;
+}
+
+static const httpd_uri_t setupend = {
+    .uri       = "/setupend",
+    .method    = HTTP_GET,
+    .handler   = setupend_get_handler,
+	.user_ctx	= NULL
+};
+
+static esp_err_t setupend_get_handler(httpd_req_t *req)
+{
+    char*  buf;
+    size_t buf_len;
+    int cuantos;
+    time_t now;
+    struct tm timeinfo;
+    char strftime_buf[64];
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+
+    buf_len = httpd_req_get_url_query_len(req) + 1;
+    if (buf_len > 1)
+    {
+		sprintf(tempb,"[%s]Invalid parameters",strftime_buf);
+        buf = (char*)malloc(buf_len);
+        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+        {
+            char param[32];
+            if (httpd_query_key_value(buf, "meter", param, sizeof(param)) == ESP_OK) //number of meters to make permanent
+            {
+            	 cuantos=atoi(param);
+            	 if (cuantos<=MAXDEVS)
+            	 {
+            		 for (int a=0;a<cuantos;a++)
+            		 {
+            			 if(theConf.configured[a]!=1)
+            			 {
+              				sprintf(tempb,"[%s]Meter %d is not configured",strftime_buf,a);
+              				goto exit;
+            			 }
+            			 else
+            				 theConf.configured[a]=2;								//waiting for challenge
+            		 }
+            			 sprintf(tempb,"[%s]Meters 1-%d will be saved. Challenge=123456",strftime_buf,cuantos);
+            	 }
+            	 else
+     				sprintf(tempb,"[%s]Invalid number of meters %d",strftime_buf,cuantos);
+            }
+        }
+        free(buf);
+       }
+exit:
+	httpd_resp_send(req, tempb, strlen(tempb));
+
+    return ESP_OK;
+}
+
+static void start_webserver(void)
+{
+    httpd_handle_t server = NULL;
+    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+
+    if(theConf.traceflag & (1<<WEBD))
+    	printf("%sStarting server on port:%d\n",WEBDT, config.server_port);
+    if (httpd_start(&server, &config) == ESP_OK) {
+        // Set URI handlers
+        httpd_register_uri_handler(server, &setup); 		//setup upto 5 meters
+        httpd_register_uri_handler(server, &setupend);		//end setup and send challenge
+        httpd_register_uri_handler(server, &challenge);		//confirm challenge and store in flash
+    }
+    if(theConf.traceflag & (1<<WEBD))
+    	printf("WebServer Started\n");
+    vTaskDelete(NULL);
+}
+
+
 void app_main()
 {
-    esp_log_level_set("*", ESP_LOG_WARN);
+    esp_log_level_set("*", ESP_LOG_INFO);
 
 	ESP_LOGI(TAG, "[APP] BuildClient starting up");
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
@@ -1742,12 +2083,12 @@ void app_main()
 
     if (theConf.centinel!=CENTINEL || !gpio_get_level((gpio_num_t)0))
 	{
-		printf("Read centinel %x",theConf.centinel);
+		printf("Read centinel %x not valid. Erasing Config\n",theConf.centinel);
 		erase_config();
 	}
 
     init_vars();				// load initial vars
- //   wifi_init(); 				// start the wifi
+    wifi_init(); 				// start the wifi
     init_fram();				// start the Fram Driver and load our Meters
     check_boot_options();		// see if we need to display boot stuff
 
@@ -1758,18 +2099,22 @@ void app_main()
     xTaskCreate(&sender,"sender",4096,NULL, 5, NULL);
 #endif
 #ifdef TEST
-	xTaskCreate(&kbd,"kbd",20480,NULL, 4, NULL);	//debuging only
+	xTaskCreate(&kbd,"kbd",4096,NULL, 4, NULL);	//debuging only
 #endif
+	if(theConf.active)
+	{
+		logIn();													//we are MeterControllers need to login to our Host Controller. For order purposes
+		xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
+		pcnt_init();												// start receiving pulses
+		xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		//in charge of saving meter activity to Fram
+		xTaskCreate(&timeKeeper,"tmK",4096,NULL, 10, NULL);			// Due to Tariffs, we need to check hour,day and month changes
+	}
+	else
+		xTaskCreate(&start_webserver,"web",10240,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager
 
-	//logIn();					//we are MeterControllers need to login to our Host Controller. For order purposes
-
-  //  xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
-  //  pcnt_init();				// start receiving pulses
-
-//	xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		//in charge of saving meter activity to Fram
-//	xTaskCreate(&timeKeeper,"tmK",10240,NULL, 10, NULL);		// Due to Tariffs, we need to check hour,day and month changes
-
-//	for (int a=0;a<MAXDEVS;a++)
-//		load_from_fram(a);
-
+		theConf.lastResetCode=rtc_get_reset_reason(0);
+		time((time_t*)&theConf.lastBootDate);
+		theConf.bootcount++;
+		write_to_flash();
+;
 }

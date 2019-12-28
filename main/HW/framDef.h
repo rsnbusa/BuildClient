@@ -1,35 +1,27 @@
-//
-//  framDef.h
-//  MeterIoT4096
-//
-//  Created by Robert on 2/17/17.
-//  Copyright © 2017 Robert. All rights reserved.
-//
 #include "defines.h"
 #ifndef framDef_h
 #define framDef_h
 
 #define TXL 				SOC_SPI_MAXIMUM_BUFFER_SIZE-4
-#define MAXDEVSUP           (5)
 #define MAXDEVSS            (5)
 #define MWORD				(2)
 #define LLONG               (4)
 
-#define FRAMDATE			0							//0 start of fram 4 bytes
-#define METERVER			(FRAMDATE+LLONG)			//4 meter internal version
-#define FREEFRAM			(METERVER+LLONG)			//8  2 bytes free
-#define SCRATCH          	(FREEFRAM+MWORD)   			//10  10 bytres of free space for recovering date and others
-#define SCRATCHEND          (SCRATCH+100)  				//110 100 bytes of scratch space at the beginning
+#define FRAMDATE			0
+#define METERVER			(FRAMDATE+LLONG)
+#define FREEFRAM			(METERVER+LLONG)
+#define SCRATCH          	(FREEFRAM+MWORD)
+#define SCRATCHEND          (SCRATCH+100)
 
 #ifdef HOST
-#define TARIFADIA           (SCRATCHEND) 				// 110 366 dias * 24 horas *2 this is the whole area required
-#define FINTARIFA           (TARIFADIA+366*24*MWORD)	// 366 dias * 24 horas *2 this is the whole area required
+#define TARIFADIA           (SCRATCHEND)
+#define FINTARIFA           (TARIFADIA+366*24*MWORD)
 #else
-#define TARIFADIA			SCRATCHEND					// 110
-#define FINTARIFA			SCRATCHEND					// 110
+#define TARIFADIA			SCRATCHEND
+#define FINTARIFA			SCRATCHEND
 #endif
 
-#define BEATSTART           (FINTARIFA)					// if HOST 17678 else 110
+#define BEATSTART           (FINTARIFA)
 #define LIFEKWH             (BEATSTART+LLONG)
 #define LIFEDATE            (LIFEKWH+LLONG)
 #define MONTHSTART          (LIFEDATE+LLONG)
@@ -43,3 +35,25 @@
 
 
 #endif /* framDef_h */
+
+//FRAMDATE(0)=4
+//METERVER(4)=4
+//FREEFRAM(8)=2
+//SCRATCH(10)=100
+//SCRATCHEND(110)=0
+//TARIFADIA(110)=0
+//FINTARIFA(110)=0
+
+//BEATSTART(110)=4
+//LIFEKWH(114)=4
+//LIFEDATE(118)=4
+//MONTHSTART(122)=24
+//MONTHRAW(146)=24
+//DAYSTART(170)=732
+//DAYRAW(902)=732
+//HOURSTART(1634)=8784
+//HOURRAW(10418)=8784
+//DATAEND(19202)=76808
+
+//TOTALFRAM(96010) Devices 5
+

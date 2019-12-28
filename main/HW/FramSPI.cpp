@@ -177,7 +177,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 			return false;
 		}
 
-		setWrite();// I guess this should be done only once, but i dont know
+		setWrite();// ONLY once required per datasheet
 		return true;
 	}
 	return false;
@@ -194,7 +194,7 @@ int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
 	count=son;
 
 	//make sure its writable. Just once
-	setWrite();
+	//setWrite();
 
 	while(count>0)
 	{
@@ -341,14 +341,9 @@ int FramSPI::readMany (uint32_t framAddr, uint8_t *valores, uint32_t son)
 
 		t.tx_buffer=&tx;
 		fueron=cuantos>TXL?TXL:cuantos;
-		t.rxlength=(fueron+4)*8;
+		t.rxlength=fueron*8;
 		t.rx_buffer=valores;
-		if(df)
-			printf("RM Tx %x Rx %d Fueron %d\n",(uint32_t)&tx,(uint32_t)t.rx_buffer,fueron);
 		ret=spi_device_polling_transmit(spi, &t);
-		if(df)
-			printf("RM %x\n",(uint32_t)valores);
-
 		cuantos-=fueron;
 		framAddr+=fueron;
 		valores+=fueron;
@@ -365,7 +360,7 @@ int FramSPI::write8 (uint32_t framAddr, uint8_t value)
 	int count=20; //retries
 
 	memset(&t,0,sizeof(t));
-	setWrite();
+//	setWrite();
 
 	if (count==0)
 		return -1; // error internal cant get a valid status. Defective chip or whatever
@@ -467,8 +462,8 @@ int FramSPI::read_tarif_day(uint16_t dia,uint8_t*  donde) //Read 24 Hours of cur
 {
 	int ret;
 	uint32_t add=TARIFADIA+dia*24*MWORD;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sR TarDay %d Add %d\n",FRMCMDT,dia,add);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sR TarDay %d Add %d\n",FRMCMDT,dia,add);
 	ret=read_tarif_bytes(add,donde,24*MWORD);
 	return ret;
 }
@@ -477,8 +472,8 @@ int FramSPI::read_tarif_hour(uint16_t dia,uint8_t hora,uint8_t*  donde) //Read s
 {
 	int ret;
 	uint32_t add=TARIFADIA+dia*24*MWORD+hora;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sR TarHour Day %d Hour %d Add %d\n",FRMCMDT,dia,hora,add);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//	printf("%sR TarHour Day %d Hour %d Add %d\n",FRMCMDT,dia,hora,add);
 	ret=read_tarif_bytes(add,donde,MWORD);
 	return ret;
 }
@@ -490,8 +485,8 @@ int FramSPI::write_bytes(uint8_t meter,uint32_t add,uint8_t*  desde,uint32_t cua
 	int ret;
 	//add+=DATAEND*meter+SCRATCH;
 	add+=DATAEND*meter;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWBytesMeter %d Add %d\n",FRMCMDT,meter,add);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWBytesMeter %d Add %d\n",FRMCMDT,meter,add);
 	ret=writeMany(add,desde,cuantos);
 	return ret;
 }
@@ -500,8 +495,8 @@ int FramSPI::read_bytes(uint8_t meter,uint32_t add,uint8_t*  donde,uint32_t cuan
 {
 	//add+=DATAEND*meter+SCRATCH;
 	add+=DATAEND*meter;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRBytesMeter %d Add %d\n",FRMCMDT,meter,add);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRBytesMeter %d Add %d\n",FRMCMDT,meter,add);
 	int ret;
 	ret=readMany(add,donde,cuantos);
 	return ret;
@@ -520,8 +515,8 @@ int FramSPI::write_beat(uint8_t medidor, uint32_t value)
 {
 	int ret;
 	uint32_t badd=BEATSTART;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWBeat Meter %d Add %d\n",FRMCMDT,medidor,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWBeat Meter %d Add %d\n",FRMCMDT,medidor,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,LLONG);
 	return ret;
 }
@@ -530,8 +525,8 @@ int FramSPI::write_lifedate(uint8_t medidor, uint32_t value)
 {
 	int ret;
 	uint32_t badd=LIFEDATE;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWLifeDate Meter %d Add %d\n",FRMCMDT,medidor,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWLifeDate Meter %d Add %d\n",FRMCMDT,medidor,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,LLONG);
 	return ret;
 }
@@ -540,8 +535,8 @@ int FramSPI::write_lifekwh(uint8_t medidor, uint32_t value)
 {
 	int ret;
 	uint32_t badd=LIFEKWH;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWLifeKWH Meter %d Add %d\n",FRMCMDT,medidor,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWLifeKWH Meter %d Add %d\n",FRMCMDT,medidor,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,LLONG);
 	return ret;
 }
@@ -550,8 +545,8 @@ int FramSPI::write_month(uint8_t medidor,uint8_t month,uint16_t value)
 {
 	int ret;
 	uint32_t badd=MONTHSTART+month*MWORD;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWMonth Meter %d Month %d Add %d\n",FRMCMDT,medidor,month,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWMonth Meter %d Month %d Add %d\n",FRMCMDT,medidor,month,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,MWORD);
 	return ret;
 }
@@ -560,8 +555,8 @@ int FramSPI::write_monthraw(uint8_t medidor,uint8_t month,uint16_t value)
 {
 	int ret;
 	uint32_t badd=MONTHRAW+month*MWORD;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWMonthRaw Meter %d Month %d Add %d\n",FRMCMDT,medidor,month,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWMonthRaw Meter %d Month %d Add %d\n",FRMCMDT,medidor,month,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,MWORD);
 	return ret;
 }
@@ -571,8 +566,8 @@ int FramSPI::write_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,
 	int ret;
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYSTART+days*MWORD;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWDay Meter %d Year %d Month %d Day %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWDay Meter %d Year %d Month %d Day %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,MWORD);
 	return ret;
 }
@@ -582,8 +577,8 @@ int FramSPI::write_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t d
 	int ret;
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYRAW+days*MWORD;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWDayRaw Meter %d Year %d Month %d Day %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWDayRaw Meter %d Year %d Month %d Day %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,MWORD);
 	return ret;
 }
@@ -593,8 +588,8 @@ int FramSPI::write_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia
 	int ret;
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURSTART+(days*24)+hora;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWHour Meter %d Year %d Month %d Day %d Hour %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,hora,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sWHour Meter %d Year %d Month %d Day %d Hour %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,hora,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,1);
 	return ret;
 }
@@ -604,8 +599,8 @@ int FramSPI::write_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t 
 	int ret;
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURRAW+(days*24)+hora;
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sWHourRaw Meter %d Year %d Month %d Day %d Hour %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,hora,badd);
+//	if(theConf.traceflag & (1<<FRMCMD))
+	//	printf("%sWHourRaw Meter %d Year %d Month %d Day %d Hour %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,hora,badd);
 	ret=write_bytes(medidor,badd,(uint8_t* )&value,1);
 	return ret;
 }
@@ -616,8 +611,8 @@ int FramSPI::read_lifedate(uint8_t medidor, uint8_t*  value)
 	uint32_t badd=LIFEDATE;
 
 	ret=read_bytes(medidor,badd,value,LLONG);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRLifeDate Meter %d Add %d Value %d\n",FRMCMDT,medidor,badd,(uint32_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRLifeDate Meter %d Add %d Value %d\n",FRMCMDT,medidor,badd,(uint32_t)*value);
 	return ret;
 }
 
@@ -638,10 +633,10 @@ int FramSPI::read_lifekwh(uint8_t medidor, uint8_t*  value)
 {
 	int ret;
 	uint32_t badd=LIFEKWH;
-	printf("Lifeadd %x\n",(uint32_t)value);
+//	printf("Lifeadd %x\n",(uint32_t)value);
 	ret=read_bytes(medidor,badd,value,LLONG);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRLifeKWH Meter %d Add %d Value %d\n",FRMCMDT,medidor,badd,(uint32_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRLifeKWH Meter %d Add %d Value %d\n",FRMCMDT,medidor,badd,(uint32_t)*value);
 	return ret;
 }
 
@@ -649,11 +644,11 @@ int FramSPI::read_beat(uint8_t medidor, uint8_t*  value)
 {
 	int ret;
 	uint32_t badd=BEATSTART;
-	printf("Beat %x\n",(uint32_t)value);
+//	printf("Beat %x\n",(uint32_t)value);
 
 	ret=read_bytes(medidor,badd,value,LLONG);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRBeat Meter %d Add %d Value %d\n",FRMCMDT,medidor,badd,(uint32_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRBeat Meter %d Add %d Value %d\n",FRMCMDT,medidor,badd,(uint32_t)*value);
 	return ret;
 }
 
@@ -663,8 +658,8 @@ int FramSPI::read_month(uint8_t medidor,uint8_t month,uint8_t*  value)
 	uint32_t badd=MONTHSTART+month*MWORD;
 
 	ret=read_bytes(medidor,badd,value,MWORD);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRMonth Meter %d Month %d Add %d Val %d\n",FRMCMDT,medidor,month,badd,(uint16_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRMonth Meter %d Month %d Add %d Val %d\n",FRMCMDT,medidor,month,badd,(uint16_t)*value);
 	return ret;
 }
 
@@ -673,8 +668,8 @@ int FramSPI::read_monthraw(uint8_t medidor,uint8_t month,uint8_t*  value)
 	int ret;
 	uint32_t badd=MONTHRAW+month*MWORD;
 	ret=read_bytes(medidor,badd,value,MWORD);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRMonthRaw Meter %d Month %d Add %d Val %d\n",FRMCMDT,medidor,month,badd,(uint16_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRMonthRaw Meter %d Month %d Add %d Val %d\n",FRMCMDT,medidor,month,badd,(uint16_t)*value);
 	return ret;
 }
 
@@ -684,8 +679,8 @@ int FramSPI::read_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,u
 	int days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYSTART+days*MWORD;
 	ret=read_bytes(medidor,badd,value,MWORD);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRDay Meter %d Month %d Day %d Add %d Days %d Val %d\n",FRMCMDT,medidor,month,dia,badd,days,(uint16_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRDay Meter %d Month %d Day %d Add %d Days %d Val %d\n",FRMCMDT,medidor,month,dia,badd,days,(uint16_t)*value);
 	return ret;
 }
 
@@ -695,8 +690,8 @@ int FramSPI::read_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t di
 	int days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYRAW+days*MWORD;
 	ret=read_bytes(medidor,badd,value,MWORD);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRDayRaw Meter %d Month %d Day %d Add %d Val %d\n",FRMCMDT,medidor,month,dia,badd,(uint16_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRDayRaw Meter %d Month %d Day %d Add %d Val %d\n",FRMCMDT,medidor,month,dia,badd,(uint16_t)*value);
 	return ret;
 }
 
@@ -706,8 +701,8 @@ int FramSPI::read_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURSTART+(days*24)+hora;
 	ret=read_bytes(medidor,badd,value,1);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRHour Meter %d Month %d Day %d Hour %d Add %d Value %d\n",FRMCMDT,medidor,month,dia,hora,badd,(uint8_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRHour Meter %d Month %d Day %d Hour %d Add %d Value %d\n",FRMCMDT,medidor,month,dia,hora,badd,(uint8_t)*value);
 	return ret;
 }
 int FramSPI::read_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
@@ -716,7 +711,7 @@ int FramSPI::read_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t d
 	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURRAW+(days*24)+hora;
 	ret=read_bytes(medidor,badd,value,1);
-	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sRHourRaw Meter %d Month %d Day %d Hour %d Add %d Value %d\n",FRMCMDT,medidor,month,dia,hora,badd,(uint8_t)*value);
+//	if(theConf.traceflag & (1<<FRMCMD))
+//		printf("%sRHourRaw Meter %d Month %d Day %d Hour %d Add %d Value %d\n",FRMCMDT,medidor,month,dia,hora,badd,(uint8_t)*value);
 	return ret;
 }

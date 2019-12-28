@@ -30,10 +30,7 @@ src/stack_check.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
- /Users/rsn/esp/esp-idf/components/esp_common/include/esp_idf_version.h \
- /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
- /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
- /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h
+ /Users/rsn/esp/esp-idf/components/esp_common/include/esp_idf_version.h
 
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
 
@@ -96,10 +93,4 @@ src/stack_check.o: \
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_idf_version.h:
-
-/Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
-
-/Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
-
-/Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h:
 /Users/rsn/esp/esp-idf/components/esp_common/src/stack_check.c:

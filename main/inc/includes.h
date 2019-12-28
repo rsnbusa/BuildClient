@@ -13,10 +13,12 @@
 extern "C"{
 #include "cJSON.h"
 #include "driver/gpio.h"
+#include "driver/pcnt.h"
 #include "driver/uart.h"
 #include "esp_event.h"
+#include "esp_http_server.h"
 #include "esp_log.h"
-//#include "esp_netif.h"
+#include "esp_netif.h"
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -33,8 +35,8 @@ extern "C"{
 #include "lwip/sys.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "rom/rtc.h"
 #include "tcpip_adapter.h"
-#include "driver/pcnt.h"
 
 void app_main();
 }

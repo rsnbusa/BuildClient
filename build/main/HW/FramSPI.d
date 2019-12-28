@@ -58,14 +58,7 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/gpio_struct.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/gpio_reg.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/gpio_sig_map.h \
- /Users/rsn/esp/esp-idf/components/driver/include/driver/uart.h \
- /Users/rsn/esp/esp-idf/components/soc/include/soc/uart_periph.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_caps.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_reg.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_struct.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_channel.h \
- /Users/rsn/esp/esp-idf/components/driver/include/driver/periph_ctrl.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/periph_defs.h \
+ /Users/rsn/esp/esp-idf/components/driver/include/driver/pcnt.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
@@ -88,6 +81,18 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_idf_version.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/semphr.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/queue.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
+ /Users/rsn/esp/esp-idf/components/soc/include/soc/pcnt_periph.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_reg.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_struct.h \
+ /Users/rsn/esp/esp-idf/components/driver/include/driver/uart.h \
+ /Users/rsn/esp/esp-idf/components/soc/include/soc/uart_periph.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_caps.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_reg.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_struct.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_channel.h \
+ /Users/rsn/esp/esp-idf/components/driver/include/driver/periph_ctrl.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/periph_defs.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/task.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/list.h \
@@ -135,6 +140,8 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/lwip/lwip/src/include/lwip/ip6_zone.h \
  /Users/rsn/esp/esp-idf/components/lwip/include/apps/dhcpserver/dhcpserver.h \
  /Users/rsn/esp/esp-idf/components/esp_netif/include/esp_netif_sta_list.h \
+ /Users/rsn/esp/esp-idf/components/esp_http_server/include/esp_http_server.h \
+ /Users/rsn/esp/esp-idf/components/nghttp/port/include/http_parser.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/app_update/include/esp_ota_ops.h \
@@ -160,7 +167,6 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_caps.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h \
@@ -186,10 +192,10 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/nvs_flash/include/nvs_flash.h \
  /Users/rsn/esp/esp-idf/components/nvs_flash/include/nvs.h \
  /Users/rsn/esp/esp-idf/components/nvs_flash/include/nvs.h \
- /Users/rsn/esp/esp-idf/components/driver/include/driver/pcnt.h \
- /Users/rsn/esp/esp-idf/components/soc/include/soc/pcnt_periph.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_reg.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_struct.h
+ /Users/rsn/esp/esp-idf/components/esp32/include/rom/rtc.h \
+ /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/rtc.h \
+ /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc_cntl_reg.h
 
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/includes.h:
 
@@ -307,21 +313,7 @@ HW/FramSPI.o: \
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/gpio_sig_map.h:
 
-/Users/rsn/esp/esp-idf/components/driver/include/driver/uart.h:
-
-/Users/rsn/esp/esp-idf/components/soc/include/soc/uart_periph.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_caps.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_reg.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_struct.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_channel.h:
-
-/Users/rsn/esp/esp-idf/components/driver/include/driver/periph_ctrl.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/periph_defs.h:
+/Users/rsn/esp/esp-idf/components/driver/include/driver/pcnt.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 
@@ -366,6 +358,30 @@ HW/FramSPI.o: \
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/semphr.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/queue.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h:
+
+/Users/rsn/esp/esp-idf/components/soc/include/soc/pcnt_periph.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_reg.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_struct.h:
+
+/Users/rsn/esp/esp-idf/components/driver/include/driver/uart.h:
+
+/Users/rsn/esp/esp-idf/components/soc/include/soc/uart_periph.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_caps.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_reg.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_struct.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_channel.h:
+
+/Users/rsn/esp/esp-idf/components/driver/include/driver/periph_ctrl.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/periph_defs.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/task.h:
 
@@ -461,6 +477,10 @@ HW/FramSPI.o: \
 
 /Users/rsn/esp/esp-idf/components/esp_netif/include/esp_netif_sta_list.h:
 
+/Users/rsn/esp/esp-idf/components/esp_http_server/include/esp_http_server.h:
+
+/Users/rsn/esp/esp-idf/components/nghttp/port/include/http_parser.h:
+
 /Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
 
 /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h:
@@ -510,8 +530,6 @@ HW/FramSPI.o: \
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h:
 
 /Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_caps.h:
 
@@ -563,11 +581,11 @@ HW/FramSPI.o: \
 
 /Users/rsn/esp/esp-idf/components/nvs_flash/include/nvs.h:
 
-/Users/rsn/esp/esp-idf/components/driver/include/driver/pcnt.h:
+/Users/rsn/esp/esp-idf/components/esp32/include/rom/rtc.h:
 
-/Users/rsn/esp/esp-idf/components/soc/include/soc/pcnt_periph.h:
+/Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/rtc.h:
 
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_reg.h:
+/Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/pcnt_struct.h:
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc_cntl_reg.h:
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/FramSPI.cpp:

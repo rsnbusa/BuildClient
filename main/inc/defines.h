@@ -1,13 +1,14 @@
 #ifndef defines_h
 #define defines_h
 
-//#define HOST							For Host Controller else MeterController
+//#define HOST							//For Host Controller else MeterController
+//#define RECOVER							// If using Recover strategy. Not really worth it
 #define BDGHOSTPORT						30000
 #define u32								uint32_t
 #define u16								uint16_t
 #define u8								uint8_t
 
-#define NKEYS							26
+#define NKEYS							28
 
 #define QDELAY							2
 #define WIFILED							2
@@ -65,6 +66,7 @@
 #define HEAPDT							"\e[37m[HEAPD]\e[0m"
 #define FRAMDT							"\e[37m[FRAMD]\e[0m"
 #define FRMCMDT							"\e[35m[FRMCMDT]\e[0m"
+#define TIEMPOT							"\e[31m[TIMED]\e[0m"
 #define ERASET							"\e[2J"
 
 #define BLACK							"\e[30m"
