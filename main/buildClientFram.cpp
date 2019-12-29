@@ -515,14 +515,14 @@ void load_from_fram(u8 meter)
 		u16 nada=theMeters[meter].currentBeat/theConf.beatsPerKw[meter];
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*theConf.beatsPerKw[meter]);
 		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
-	xSemaphoreGive(framSem);
+		xSemaphoreGive(framSem);
 
 		if(theConf.traceflag & (1<<FRAMD))
 			printf("[FRAMD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
 	}
 }
 
-static void init_fram()
+static void init_fram( bool load)
 {
 #ifdef RECOVER
 	scratchTypespi scratch;
@@ -551,8 +551,11 @@ static void init_fram()
 		//all okey in our Fram after this point
 
 		//load all devices counters from FRAM
-		for (int a=0;a<MAXDEVS;a++)
+		if(load)
+		{
+			for (int a=0;a<MAXDEVS;a++)
 			load_from_fram(a);
+		}
 	}
 }
 
@@ -962,154 +965,32 @@ void sendStatusMeter(meterType* meter)
 	gpio_set_level((gpio_num_t)WIFILED, 0);
 }
 
-#ifdef SENDER
-void sendStatusNow(meterType* meter)
+void erase_config() //do the dirty work
 {
-
-	cJSON *root=cJSON_CreateObject();
-	cJSON *cmdJ=cJSON_CreateObject();
-	cJSON *cmdJ2=cJSON_CreateObject();
-	cJSON *ar = cJSON_CreateArray();
-
-	if(root==NULL)
-	{
-		printf("cannot create root\n");
-		return;
-	}
-	cJSON_AddStringToObject(cmdJ,"password",	"zipo");
-	cJSON_AddStringToObject(cmdJ,"uid",			"2C7BB292");
-	cJSON_AddStringToObject(cmdJ,"cmd",			"/ga_session");
-	cJSON_AddStringToObject(cmdJ,"time",		"07:14:08");
-	cJSON_AddStringToObject(cmdJ,"date",		"2019-11-02");
-
-	cJSON_AddStringToObject(cmdJ2,"password",	"zipo");
-	cJSON_AddStringToObject(cmdJ2,"uid",		"2C7BB292");
-	cJSON_AddStringToObject(cmdJ2,"cmd",		"/ga_firmware");
-	cJSON_AddStringToObject(cmdJ2,"time",		"07:14:08");
-	cJSON_AddStringToObject(cmdJ2,"date",		"2019-11-02");
-
-	cJSON_AddItemToArray(ar, cmdJ);
-	cJSON_AddItemToArray(ar, cmdJ2);
-	cJSON_AddItemToObject(root, "Batch",ar);
-	cJSON_AddNumberToObject(root,"Tran",++sentTotal);
-
-	char *rendered=cJSON_Print(root);
-	if (deb)
-	{
-		printf("[MQTTD]Json %s\n",rendered);
-	}
-	printf("Sending message Sent %d\n",sentTotal);
-
-	if(xSemaphoreTake(wifiSem, portMAX_DELAY/  portTICK_RATE_MS))
-	{
-		host_publish(rendered);
-		xSemaphoreGive(wifiSem);
-	}
-	free(rendered);
-	cJSON_Delete(root);
-
-	}
-
- void submode(void * pArg)
-{
-	 meterType meter;
-
-	 while(1)
-	{
-
-		if( xQueueReceive( mqttQ, &meter, portMAX_DELAY/  portTICK_RATE_MS ))
-		{
-			if (deb)
-			{
-				printf("Heap after submode rx %d\n",esp_get_free_heap_size());
-				printf("SubClientMode Queue %d\n",uxQueueMessagesWaiting( mqttQ ));
-			}
-			sendStatusNow(&meter);
-			if(deb)
-				printf("Heap after submode %d\n",esp_get_free_heap_size());
-
-		}
-
-		else
-			vTaskDelay(100 /  portTICK_RATE_MS);
-	}
+	memset(&theConf,0,sizeof(theConf));
+	theConf.centinel=CENTINEL;
+	theConf.ssl=0;
+	theConf.beatsPerKw[0]=800;//old way
+	theConf.bounce[0]=100;
+	//    fram.write_tarif_bpw(0, 800); // since everything is going to be 0, BPW[0]=800 HUMMMMMM????? SHould load Tariffs after this
+	write_to_flash();
+	//	if(  xSemaphoreTake(logSem, portMAX_DELAY/  portTICK_RATE_MS))
+	//	{
+	//		fclose(bitacora);
+	//	    bitacora = fopen("/spiflash/log.txt", "w"); //truncate
+	//	    if(bitacora)
+	//	    {
+	//	    	fclose(bitacora); //Close and reopen r+
+	//		    bitacora = fopen("/spiflash/log.txt", "r+");
+	//		    if(!bitacora)
+	//		    	printf("Could not reopen logfile\n");
+	//		    else
+	//			    postLog(0,"Log cleared");
+	//	    }
+	//	    xSemaphoreGive(logSem);
+	//	}
+	printf("Centinel %x\n",theConf.centinel);
 }
-#endif
-
-#ifdef SENDER
-static void mqttManager(void* arg)
-{
-	meterType meter;
-
-	while(1)
-	{
-		if( xQueueReceive( mqttR, &meter, portMAX_DELAY/  portTICK_RATE_MS ))
-		{
-			printf("Meter %d Beat %d Pos %d Queue %d Heap %d\n",meter.pin,meter.currentBeat,meter.pos,uxQueueMessagesWaiting(mqttR),esp_get_free_heap_size());
-			sendStatusMeter(&meter);
-			printf("mqttloop heap %d\n",esp_get_free_heap_size());
-		}
-		else
-			delay(100);
-	}
-}
-
-
-void sender(void *pArg)
-{
-	meterType algo;
-
-	while(true)
-	{
-		if(deb)
-			printf("Heap before send %d\n",esp_get_free_heap_size());
-		if(!xQueueSend( mqttQ,&algo,0))
-			printf("Error sending queue %d\n",uxQueueMessagesWaiting( mqttQ ));
-		else
-			if(deb)
-			{
-				//printf("Sending %d\n",algo++);
-				printf("Heap after send %d\n",esp_get_free_heap_size());
-			}
-
-
-		if(uxQueueMessagesWaiting(mqttQ)>uxQueueSpacesAvailable(mqttQ))
-		{
-			while(uxQueueMessagesWaiting(mqttQ)>2)
-				delay(1000);
-		}
-		delay(qdelay);
-	}
-}
-#endif
-
-
-	void erase_config() //do the dirty work
-	{
-		memset(&theConf,0,sizeof(theConf));
-		theConf.centinel=CENTINEL;
-		theConf.ssl=0;
-		theConf.beatsPerKw[0]=800;//old way
-		theConf.bounce[0]=100;
-		//    fram.write_tarif_bpw(0, 800); // since everything is going to be 0, BPW[0]=800 HUMMMMMM????? SHould load Tariffs after this
-		write_to_flash();
-		//	if(  xSemaphoreTake(logSem, portMAX_DELAY/  portTICK_RATE_MS))
-		//	{
-		//		fclose(bitacora);
-		//	    bitacora = fopen("/spiflash/log.txt", "w"); //truncate
-		//	    if(bitacora)
-		//	    {
-		//	    	fclose(bitacora); //Close and reopen r+
-		//		    bitacora = fopen("/spiflash/log.txt", "r+");
-		//		    if(!bitacora)
-		//		    	printf("Could not reopen logfile\n");
-		//		    else
-		//			    postLog(0,"Log cleared");
-		//	    }
-		//	    xSemaphoreGive(logSem);
-		//	}
-		printf("Centinel %x\n",theConf.centinel);
-	}
 
 void framManager(void * pArg)
 {
@@ -1261,21 +1142,19 @@ void app_main()
 
     init_vars();				// load initial vars
     wifi_init(); 				// start the wifi
-    init_fram();				// start the Fram Driver and load our Meters
+    init_fram(false);				// start the Fram Driver and load our Meters
     check_boot_options();		// see if we need to display boot stuff
 
-#ifdef SENDER
-    xTaskCreate(&mqttManager,"meters",4096,NULL, 5, NULL);
-    xTaskCreate(&submode,"U571",10240,NULL, 5, NULL);
-    delay(1000);
-    xTaskCreate(&sender,"sender",4096,NULL, 5, NULL);
-#endif
 #ifdef TEST
 	xTaskCreate(&kbd,"kbd",4096,NULL, 4, NULL);	//debuging only
 #endif
 	if(theConf.active)
 	{
 		logIn();													//we are MeterControllers need to login to our Host Controller. For order purposes
+		//load from fram AFTER we have the date
+		for (int a=0;a<MAXDEVS;a++)
+		load_from_fram(a);
+
 		xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
 		pcnt_init();												// start receiving pulses
 		xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		//in charge of saving meter activity to Fram
