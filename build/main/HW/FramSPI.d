@@ -24,8 +24,6 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/projStruct.h \
  /Users/rsn/esp/esp-idf/components/json/cJSON/cJSON.h \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/gpio.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
@@ -195,7 +193,11 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/esp32/include/rom/rtc.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/rtc.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc_cntl_reg.h
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc_cntl_reg.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/globals.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/projStruct.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/includes.h
 
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/includes.h:
 
@@ -244,10 +246,6 @@ HW/FramSPI.o: \
 /Users/rsn/esp/esp-idf/components/newlib/include/string.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h:
-
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h:
-
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/projStruct.h:
 
 /Users/rsn/esp/esp-idf/components/json/cJSON/cJSON.h:
 
@@ -588,4 +586,12 @@ HW/FramSPI.o: \
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc_cntl_reg.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/globals.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/projStruct.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/includes.h:
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/FramSPI.cpp:

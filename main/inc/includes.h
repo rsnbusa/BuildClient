@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <string>
-#include "defines.h"
-#include "projStruct.h"
 
 extern "C"{
 #include "cJSON.h"

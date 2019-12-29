@@ -1,24 +1,7 @@
 #include "includes.h"
 #include "defines.h"
-
-bool							conn=false,framFlag,df=false;
-char							lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6];
-config_flash					theConf;
-const static int 				WIFI_BIT = BIT0;
-FramSPI							fram;
-gpio_config_t 					io_conf;
-int								gsock;
-meterType						theMeters[MAXDEVS];
-nvs_handle 						nvshandle;
-QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;
-SemaphoreHandle_t 				wifiSem,framSem;
-static const char 				*TAG = "BDGCLIENT";
-static EventGroupHandle_t 		wifi_event_group;
-u16                  			diaHoraTarifa,yearDay,llevoMsg=0,waitQueue=500,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
-u32								sentTotal=0,sendTcp=0,totalMsg[MAXDEVS],theMacNum,totalPulses;
-u8								qwait=0,theBreakers[MAXDEVS],daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };
-host_t							setupHost[MAXDEVS];
-TaskHandle_t					webHandle;
+#include "projStruct.h"
+#include "globals.h"
 
 using namespace std;
 
@@ -27,13 +10,10 @@ void submode(void * pArg);
 #endif
 
 extern void kbd(void *arg);
+extern void start_webserver(void *arg);
 
 void sendStatusMeter(meterType* meter);
 void sendStatusMeterAll();
-static esp_err_t challenge_get_handler(httpd_req_t *req);
-static esp_err_t setup_get_handler(httpd_req_t *req);
-static esp_err_t setupend_get_handler(httpd_req_t *req);
-
 
 uint32_t IRAM_ATTR millisISR()
 {
@@ -1158,7 +1138,6 @@ void framManager(void * pArg)
 
 void init_vars()
 {
-	   deb=false;
 	   qwait=QDELAY;
 	   qdelay=qwait*1000;
 	   sendTcp=waitQueue=500;
@@ -1166,6 +1145,22 @@ void init_vars()
 	   wifiSem= xSemaphoreCreateBinary();
 	   xSemaphoreGive(wifiSem);
 	   diaHoraTarifa=100;// div by zero if not and not loaded
+	   strcpy(TAG , "BDGCLIENT");
+	   WIFI_BIT = BIT0;
+	   waitQueue=500;
+
+	  daysInMonth [0] =31;
+	  daysInMonth [1] =28;
+	  daysInMonth [2] =31;
+	  daysInMonth [3] =30;
+	  daysInMonth [4] =31;
+	  daysInMonth [5] =30;
+	  daysInMonth [6] =31;
+	  daysInMonth [7] =31;
+	  daysInMonth [8] =30;
+	  daysInMonth [9] =31;
+	  daysInMonth [10] =30;
+	  daysInMonth [11] =31;
 
 	   mqttQ = xQueueCreate( 20, sizeof( meterType ) );
 	   if(!mqttQ)
@@ -1240,230 +1235,6 @@ void check_boot_options()
 	}
 }
 
-static const httpd_uri_t setup = {
-    .uri       = "/setup",
-    .method    = HTTP_GET,
-    .handler   = setup_get_handler,
-	.user_ctx	= NULL
-};
-
-static esp_err_t setup_get_handler(httpd_req_t *req)
-{
-    char*  buf;
-    size_t buf_len;
-    int cualm=0;
-    time_t now;
-    struct tm timeinfo;
-    char strftime_buf[64];
-
-	time(&now);
-	localtime_r(&now, &timeinfo);
-	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-
-    buf_len = httpd_req_get_url_query_len(req) + 1;
-    if (buf_len > 1)
-    {
-        buf = (char*)malloc(buf_len);
-        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
-        {
-            char param[32];
-            if (httpd_query_key_value(buf, "meter", param, sizeof(param)) == ESP_OK)
-            {
-            	 cualm=atoi(param);
-            	 sprintf(tempb,"[%s]Invalid Meter range %d",strftime_buf,cualm);
-            	 if (cualm>=MAXDEVS)
-            		 goto exit;
-            }
-            if (httpd_query_key_value(buf, "mid", param, sizeof(param)) == ESP_OK)
-            	 strcpy((char*)&setupHost[cualm].meterid,param);
-
-            if (httpd_query_key_value(buf, "kwh", param, sizeof(param)) == ESP_OK)
-            	 setupHost[cualm].startKwh=atoi(param);
-
-            if (httpd_query_key_value(buf, "bpk", param, sizeof(param)) == ESP_OK)
-            	 setupHost[cualm].bpkwh=atoi(param);
-
-            if (httpd_query_key_value(buf, "duedate", param, sizeof(param)) == ESP_OK)
-            	 setupHost[cualm].diaCorte=atoi(param);
-
-            if (httpd_query_key_value(buf, "tariff", param, sizeof(param)) == ESP_OK)
-            	 setupHost[cualm].tariff=atoi(param);
-        }
-        free(buf);
-    }
-
-    if(setupHost[cualm].bpkwh>0 && setupHost[cualm].diaCorte>0 && setupHost[cualm].startKwh>0 && setupHost[cualm].tariff>0 && strlen(setupHost[cualm].meterid)>0)
-    {
-		time(&now);
-		localtime_r(&now, &timeinfo);
-		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    	setupHost[cualm].valid=true;
-    	theConf.configured[cualm]=1; //in transit mode
-    	sprintf(tempb,"[%s]Meter:%d Id=%s kWh=%d BPK=%d Corte=%d Tariff=%d",strftime_buf,cualm,setupHost[cualm].meterid,setupHost[cualm].startKwh,setupHost[cualm].bpkwh,
-    			setupHost[cualm].diaCorte,setupHost[cualm].tariff);
-    }
-    else
-    {
-    	exit:
-    	setupHost[cualm].valid=false;
-        sprintf(tempb,"[%s]Invalid parameters",strftime_buf);
-    }
-
-	httpd_resp_send(req, tempb, strlen(tempb));
-
-    return ESP_OK;
-}
-
-static const httpd_uri_t challenge = {
-    .uri       = "/challenge",
-    .method    = HTTP_GET,
-    .handler   = challenge_get_handler,
-	.user_ctx	= NULL
-};
-
-static esp_err_t challenge_get_handler(httpd_req_t *req)
-{
-    char*  buf;
-    size_t buf_len;
-    int cualm,valor;
-    time_t now;
-    struct tm timeinfo;
-    char strftime_buf[64];
-
-	time(&now);
-	localtime_r(&now, &timeinfo);
-	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-
-    buf_len = httpd_req_get_url_query_len(req) + 1;
-    if (buf_len > 1)
-    {
-		sprintf(tempb,"[%s]Invalid parameters",strftime_buf);
-        buf = (char*)malloc(buf_len);
-        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
-        {
-            char param[32];
-
-			if (httpd_query_key_value(buf, "challenge", param, sizeof(param)) == ESP_OK)
-			{
-				valor=atoi(param);
-				if (valor==654321)
-				{
-					for (int a=0;a<MAXDEVS;a++)
-					{
-						if(theConf.configured[a]==2)
-						{
-							theMeters[a].beatsPerkW=setupHost[a].bpkwh;
-							memcpy((void*)&theMeters[a].serialNumber,(void*)&setupHost[a].meterid,sizeof(theMeters[a].serialNumber));
-							theMeters[a].curLife=setupHost[a].startKwh;
-							time((time_t*)&theMeters[a].ampTime);
-
-							theConf.beatsPerKw[a]=setupHost[a].bpkwh;
-							memcpy(theConf.medidor_id[a],(void*)&setupHost[a].meterid,sizeof(theConf.medidor_id[cualm]));
-							time((time_t*)&theConf.bornDate[a]);
-							theConf.beatsPerKw[a]=setupHost[a].bpkwh;
-							theConf.bornKwh[a]=setupHost[a].startKwh;
-							theConf.diaDeCorte[a]=setupHost[a].tariff;
-							theConf.configured[a]=3;					//final status configured
-						}
-						else
-							theConf.configured[a]=0; //reset it
-					}
-					theConf.active=1;				// theConf is now ACTIVE and Certified
-					write_to_flash();
-					memset(&setupHost,0,sizeof(setupHost));
-
-
-					sprintf(tempb,"[%s]Meters were saved permanently",strftime_buf);
-				}
-				else
-					sprintf(tempb,"[%s]Invalid challenge",strftime_buf);
-			}
-			else
-				sprintf(tempb,"[%s]Missing challenge",strftime_buf);
-        }
-        free(buf);
-       }
-	httpd_resp_send(req, tempb, strlen(tempb));
-
-    return ESP_OK;
-}
-
-static const httpd_uri_t setupend = {
-    .uri       = "/setupend",
-    .method    = HTTP_GET,
-    .handler   = setupend_get_handler,
-	.user_ctx	= NULL
-};
-
-static esp_err_t setupend_get_handler(httpd_req_t *req)
-{
-    char*  buf;
-    size_t buf_len;
-    int cuantos;
-    time_t now;
-    struct tm timeinfo;
-    char strftime_buf[64];
-
-	time(&now);
-	localtime_r(&now, &timeinfo);
-	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-
-    buf_len = httpd_req_get_url_query_len(req) + 1;
-    if (buf_len > 1)
-    {
-		sprintf(tempb,"[%s]Invalid parameters",strftime_buf);
-        buf = (char*)malloc(buf_len);
-        if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
-        {
-            char param[32];
-            if (httpd_query_key_value(buf, "meter", param, sizeof(param)) == ESP_OK) //number of meters to make permanent
-            {
-            	 cuantos=atoi(param);
-            	 if (cuantos<=MAXDEVS)
-            	 {
-            		 for (int a=0;a<cuantos;a++)
-            		 {
-            			 if(theConf.configured[a]!=1)
-            			 {
-              				sprintf(tempb,"[%s]Meter %d is not configured",strftime_buf,a);
-              				goto exit;
-            			 }
-            			 else
-            				 theConf.configured[a]=2;								//waiting for challenge
-            		 }
-            			 sprintf(tempb,"[%s]Meters 1-%d will be saved. Challenge=123456",strftime_buf,cuantos);
-            	 }
-            	 else
-     				sprintf(tempb,"[%s]Invalid number of meters %d",strftime_buf,cuantos);
-            }
-        }
-        free(buf);
-       }
-exit:
-	httpd_resp_send(req, tempb, strlen(tempb));
-
-    return ESP_OK;
-}
-
-static void start_webserver(void)
-{
-    httpd_handle_t server = NULL;
-    httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-
-    if(theConf.traceflag & (1<<WEBD))
-    	printf("%sStarting server on port:%d\n",WEBDT, config.server_port);
-    if (httpd_start(&server, &config) == ESP_OK) {
-        // Set URI handlers
-        httpd_register_uri_handler(server, &setup); 		//setup upto 5 meters
-        httpd_register_uri_handler(server, &setupend);		//end setup and send challenge
-        httpd_register_uri_handler(server, &challenge);		//confirm challenge and store in flash
-    }
-    if(theConf.traceflag & (1<<WEBD))
-    	printf("WebServer Started\n");
-    vTaskDelete(NULL);
-}
-
-
 void app_main()
 {
     esp_log_level_set("*", ESP_LOG_WARN);
@@ -1517,5 +1288,4 @@ void app_main()
 		time((time_t*)&theConf.lastBootDate);
 		theConf.bootcount++;
 		write_to_flash();
-;
 }

@@ -2,7 +2,7 @@
 #define defines_h
 
 //#define HOST							//For Host Controller else MeterController
-//#define RECOVER							// If using Recover strategy. Not really worth it
+//#define RECOVER						// If using Recover strategy. Not really worth it
 #define BDGHOSTPORT						30000
 #define u32								uint32_t
 #define u16								uint16_t

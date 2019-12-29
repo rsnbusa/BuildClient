@@ -1,9 +1,10 @@
 #include "includes.h"
 #include "defines.h"
 #define GLOBAL
+#include "globals.h"
 // file spi_caps.h in soc/esp32/include/soc has parameter SOC_SPI_MAXIMUM_BUFFER_SIZE set to 64. Max bytes in Halfduplex. changed to 1024
 #include "soc/spi_caps.h"
-extern config_flash					theConf;
+//extern config_flash					theConf;
 extern void delay(uint32_t a);
 extern bool df;
 
