@@ -123,12 +123,13 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	ret=spi_bus_initialize(VSPI_HOST, &buscfg, 0);
 	assert(ret == ESP_OK);
 
-	devcfg .clock_speed_hz=SPI_MASTER_FREQ_26M;              	//Clock out at 26 MHz
-//	devcfg .clock_speed_hz=8000000;              	//Clock out for test in Saleae limited speed
+//	devcfg .clock_speed_hz=SPI_MASTER_FREQ_26M;              	//Clock out at 26 MHz
+	devcfg .clock_speed_hz=8000000;              	//Clock out for test in Saleae limited speed
 	devcfg.mode=0;                                	//SPI mode 0
 	devcfg.spics_io_num=CS;               			//CS pin
 	devcfg.queue_size=7;                         	//We want to be able to queue 7 transactions at a time
 	devcfg.flags=SPI_DEVICE_HALFDUPLEX;
+
 
 	ret=spi_bus_add_device(VSPI_HOST, &devcfg, &spi);
 	if (ret==ESP_OK)
@@ -178,54 +179,17 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 			return false;
 		}
 
+		devcfg.address_bits=addressBytes*8;
+		devcfg.command_bits=8;
+
+		ret=spi_bus_add_device(VSPI_HOST, &devcfg, &spi);
+
 		setWrite();// ONLY once required per datasheet
 		return true;
 	}
 	return false;
 }
 
-int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
-{
-	spi_transaction_t t;
-	esp_err_t ret=0;
-	int count,fueron; //retries
-	uint8_t lbuf[TXL+4];
-
-	memset(&t,0,sizeof(t));
-	count=son;
-
-	//make sure its writable. Just once
-	//setWrite();
-
-	while(count>0)
-	{
-		lbuf[0]=MBRSPI_WRITE;
-		if(addressBytes==2)
-		{
-			lbuf[1]=(framAddr & 0xff00)>>8;
-			lbuf[2]=framAddr& 0xff;
-			fueron=count>TXL+1?TXL+1:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
-			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
-			memcpy(&lbuf[3],valores,fueron); //should check that son is less or equal to bbuffer size
-		}
-		else
-		{
-			lbuf[1]=(framAddr & 0xff0000)>>16;
-			lbuf[2]=(framAddr & 0xff00)>>8;
-			lbuf[3]=framAddr & 0xff;
-			fueron=count>TXL?TXL:count;	//= 32 - 4 command bytes MAX tx bytes in Half Duplex 32 bytes
-			t.length=(fueron+4)*8;                     //Command is  (bytes+3) *8 =32 bits
-			memcpy(&lbuf[4],valores,fueron);
-		}
-
-		t.tx_buffer=lbuf;
-		ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-		count-=fueron; // reduce bytes processed
-		framAddr+=fueron;  //advance Address by fueron bytes processed
-		valores+=fueron;  // advance Buffer to write by processed bytes
-	}
-	return ret;
-}
 
 int FramSPI::format(uint8_t valor, uint8_t *lbuffer,uint32_t len,bool all)
 {
@@ -311,36 +275,90 @@ int FramSPI::formatMeter(uint8_t cual, uint8_t *buffer,uint16_t len)
 
 }
 
+int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
+{
+	spi_transaction_t t;
+	esp_err_t ret=0;
+	int count,fueron; //retries
+//	uint8_t lbuf[TXL+4];
+
+	memset(&t,0,sizeof(t));
+	count=son;
+
+	t.cmd=MBRSPI_WRITE;
+	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD;
+
+	while(count>0)
+	{
+		t.addr=framAddr;
+		fueron=count>TXL+1?TXL+1:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
+
+	//	lbuf[0]=MBRSPI_WRITE;
+//		if(addressBytes==2)
+//		{
+//	//		lbuf[1]=(framAddr & 0xff00)>>8;
+//	//		lbuf[2]=framAddr& 0xff;
+//			fueron=count>TXL+1?TXL+1:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
+//			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
+//			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
+//	//		memcpy(&lbuf[3],valores,fueron); //should check that son is less or equal to bbuffer size
+//		}
+//		else
+//		{
+//		//	lbuf[1]=(framAddr & 0xff0000)>>16;
+//		//	lbuf[2]=(framAddr & 0xff00)>>8;
+//		//	lbuf[3]=framAddr & 0xff;
+//			fueron=count>TXL?TXL:count;	//= 32 - 4 command bytes MAX tx bytes in Half Duplex 32 bytes
+//	//		t.length=(fueron+4)*8;                     //Command is  (bytes+3) *8 =32 bits
+//			t.length=(fueron+4)*8;                     //Command is  (bytes+3) *8 =32 bits
+//	//		memcpy(&lbuf[4],valores,fueron);
+//		}
+
+	//	t.tx_buffer=lbuf;
+		t.length=fueron*8;
+		t.tx_buffer=valores;
+
+		ret=spi_device_polling_transmit(spi, &t);  //Transmit!
+		count-=fueron; // reduce bytes processed
+		framAddr+=fueron;  //advance Address by fueron bytes processed
+		valores+=fueron;  // advance Buffer to write by processed bytes
+	}
+	return ret;
+}
+
 int FramSPI::readMany (uint32_t framAddr, uint8_t *valores, uint32_t son)
 {
 	esp_err_t ret=0;
 	spi_transaction_t t;
-	uint8_t tx[4];
+//	uint8_t tx[4];
 	int cuantos,fueron;
 
+//	tx[0]=MBRSPI_READ;
 	memset(&t, 0, sizeof(t));
 
-	tx[0]=MBRSPI_READ;
+	t.cmd=MBRSPI_READ;
+	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD;
 
 	cuantos=son;
 	while(cuantos>0)
 	{
-		memset(&t, 0, sizeof(t));
-		if(addressBytes == 2)
-		{
-			tx[1]=(framAddr & 0xff00)>>8;
-			tx[2]=framAddr & 0xff;
-			t.length=24;
-		}
-		else
-		{
-			tx[1]=(framAddr & 0xff0000) >>16;
-			tx[2]=(framAddr & 0xff00)>>8;
-			tx[3]=framAddr & 0xff;
-			t.length=32;
-		}
+		t.addr=framAddr;
+//		if(addressBytes == 2)
+//		{
+//			tx[1]=(framAddr & 0xff00)>>8;
+//			tx[2]=framAddr & 0xff;
+//			t.length=24;
+//		}
+//		else
+//		{
+//			tx[1]=(framAddr & 0xff0000) >>16;
+//			tx[2]=(framAddr & 0xff00)>>8;
+//			tx[3]=framAddr & 0xff;
+//			t.length=32;
+//		}
 
-		t.tx_buffer=&tx;
+	//	t.tx_buffer=&tx;
+	//	t.tx_buffer=NULL;
 		fueron=cuantos>TXL?TXL:cuantos;
 		t.rxlength=fueron*8;
 		t.rx_buffer=valores;
@@ -357,35 +375,40 @@ int FramSPI::write8 (uint32_t framAddr, uint8_t value)
 
 	esp_err_t ret;
 	spi_transaction_t t;
-	uint8_t data[5];
-	int count=20; //retries
+//	uint8_t data[5];
+	//int count=20; //retries
 
 	memset(&t,0,sizeof(t));
-//	setWrite();
 
-	if (count==0)
-		return -1; // error internal cant get a valid status. Defective chip or whatever
+	t.cmd=MBRSPI_WRITE;
+	t.addr=framAddr;
+	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD | SPI_TRANS_USE_TXDATA  ;
 
-	data[0]=MBRSPI_WRITE;
-	if(addressBytes==2)
-	{
-		data[1]=(framAddr &0xff00)>>8;
-		data[2]=framAddr& 0xff;
-		data[3]=value;
-		t.length=32;                     //Command is 4 bytes *8 =32 bits
-	}
-	else
-	{
-		data[1]=(framAddr & 0xff0000)>>16;
-		data[2]=(framAddr& 0xff00)>>8;
-		data[3]=framAddr& 0xff;
-		data[4]=value;
-		t.length=40;                     //Command is 5 bytes *8 =402 bits
-	}
+//	if (count==0)
+	//	return -1; // error internal cant get a valid status. Defective chip or whatever
 
-	t.tx_buffer=&data;
-	t.rxlength=0;
-	t.rx_buffer=NULL;
+//	data[0]=MBRSPI_WRITE;
+//	if(addressBytes==2)
+//	{
+//		data[1]=(framAddr &0xff00)>>8;
+//		data[2]=framAddr& 0xff;
+//		data[3]=value;
+//		t.length=32;                     //Command is 4 bytes *8 =32 bits
+//	}
+//	else
+//	{
+//		data[1]=(framAddr & 0xff0000)>>16;
+//		data[2]=(framAddr& 0xff00)>>8;
+//		data[3]=framAddr& 0xff;
+//		data[4]=value;
+//		t.length=40;                     //Command is 5 bytes *8 =402 bits
+//	}
+
+//	t.tx_buffer=&data;
+	t.length=8;
+	t.tx_data[0]=value;
+//	t.rxlength=0;
+//	t.rx_buffer=NULL;
 	ret=spi_device_polling_transmit(spi, &t);  //Transmit!
 	return ret;
 }
@@ -393,28 +416,35 @@ int FramSPI::write8 (uint32_t framAddr, uint8_t value)
 int FramSPI::read8 (uint32_t framAddr,uint8_t *donde)
 {
 	spi_transaction_t t;
-	uint8_t data[4];
+//	uint8_t data[4];
 	int ret;
 	memset(&t, 0, sizeof(t));       //Zero out the transaction
-	data[0]=MBRSPI_READ;
-	if(addressBytes==2)
-	{
-		data[1]=(framAddr &0xff00)>>8;
-		data[2]=framAddr& 0xff;
-		t.length=24;                     //Command is 3 btyes *8 =24 bits
-	}
-	else
-	{
-		data[1]=(framAddr & 0xff0000)>>16;
-		data[2]=(framAddr& 0xff00)>>8;
-		data[3]=framAddr& 0xff;
-		t.length=32;                     //Command is 4 btyes *8 =32 bits
-	}
+
+	t.cmd=MBRSPI_READ;
+	t.addr=framAddr;
+	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD | SPI_TRANS_USE_RXDATA  ;
+
+
+//	data[0]=MBRSPI_READ;
+//	if(addressBytes==2)
+//	{
+//		data[1]=(framAddr &0xff00)>>8;
+//		data[2]=framAddr& 0xff;
+//		t.length=24;                     //Command is 3 btyes *8 =24 bits
+//	}
+//	else
+//	{
+//		data[1]=(framAddr & 0xff0000)>>16;
+//		data[2]=(framAddr& 0xff00)>>8;
+//		data[3]=framAddr& 0xff;
+//		t.length=32;                     //Command is 4 btyes *8 =32 bits
+//	}
 
 	t.rxlength=8;
-	t.rx_buffer=donde;
-	t.tx_buffer=&data;
+//	t.rx_buffer=donde;
+//	t.tx_buffer=&data;
 	ret=spi_device_polling_transmit(spi, &t);  //Transmit!
+	*donde=t.rx_data[0];
 	return ret;
 
 
