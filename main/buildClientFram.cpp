@@ -43,13 +43,14 @@ void hourChange()
 			printf("%sHour change meter %d val %d\n",TIEMPOT,a,theMeters[a].curHour);
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
-			fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
-			fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
+		//	fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
+		//	fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
+			fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
+			fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
 			xSemaphoreGive(framSem);
 		}
 		theMeters[a].curHour=0; //init it
 		theMeters[a].curHourRaw=0;
-	//	delay(500);
 	}
 	sendStatusMeterAll();
 	oldHorag=horag;
@@ -67,14 +68,17 @@ void dayChange()
 					printf("%sDay change mes %d day %d oldday %d corte %d sent %d\n",TIEMPOT,oldMesg,diag,oldDiag,theConf.diaDeCorte[a],theConf.corteSent[a]);
 				if(xSemaphoreTake(framSem, portMAX_DELAY))
 				{
-					fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
-					fram. write_dayraw(a,yearg, oldMesg,oldDiag, theMeters[a].curDayRaw);
+				//	fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
+				//	fram. write_dayraw(a,yearg, oldMesg,oldDiag, theMeters[a].curDayRaw);
+					fram. write_day(a,oldYearDay, theMeters[a].curDay);
+					fram. write_dayraw(a,oldYearDay,theMeters[a].curDayRaw);
 					theMeters[a].curDay=0;
 					theMeters[a].curDayRaw=0;
 					xSemaphoreGive(framSem);
 				}
 			}
 			oldDiag=diag;
+			oldYearDay=yearDay;
 }
 
 void monthChange()
@@ -112,10 +116,11 @@ void check_date_change()
 		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
 				timep.tm_min,timep.tm_sec,yearDay);
 
-	if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
-		return;
+	//if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
+	//	return;
+//hours is a FACT that should change due to timer being fired every 1 hour
 
-	if(horag!=oldHorag) // hour change up or down
+//	if(horag!=oldHorag) // hour change up or down
 		hourChange();
 
 	if(diag!=oldDiag) // day change up or down. Also hour MUST HAVE CHANGED before
@@ -433,6 +438,7 @@ void write_to_fram(u8 meter,bool addit)
 	diag=timeinfo.tm_mday-1;
 	yearg=timeinfo.tm_year+1900;
 	horag=timeinfo.tm_hour;
+	yearDay=timeinfo.tm_yday;
 
 	if(addit)
 	{
@@ -471,10 +477,14 @@ void write_to_fram(u8 meter,bool addit)
 		fram.write_lifekwh(meter,theMeters[meter].curLife);
 		fram.write_month(meter,mesg,theMeters[meter].curMonth);
 		fram.write_monthraw(meter,mesg,theMeters[meter].curMonthRaw);
-		fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
-		fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
-		fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
-		fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
+//		fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
+		fram.write_day(meter,oldYearDay,theMeters[meter].curDay);
+//		fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
+		fram.write_dayraw(meter,oldYearDay,theMeters[meter].curDayRaw);
+//		fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
+		fram.write_hour(meter,oldYearDay,horag,theMeters[meter].curHour);
+//		fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
+		fram.write_hourraw(meter,oldYearDay,horag,theMeters[meter].curHourRaw);
 		fram.write_lifedate(meter,theMeters[meter].lastKwHDate);  //should be down after scratch record???
 #ifdef RECOVER
 		fram.write8(SCRATCH,0); //Fast write first byte of Scratch record to 0=done.
@@ -503,10 +513,14 @@ void load_from_fram(u8 meter)
 		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
 		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
 		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
-		fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
-		fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
-		fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
-		fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
+	//	fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
+		fram.read_day(meter, oldYearDay, (u8*)&theMeters[meter].curDay);
+	//	fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
+		fram.read_dayraw(meter, oldYearDay, (u8*)&theMeters[meter].curDayRaw);
+	//	fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
+		fram.read_hour(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHour);
+	//	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
+		fram.read_hourraw(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHourRaw);
 		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
 		totalPulses+=theMeters[meter].currentBeat;
 		if(theConf.beatsPerKw[meter]==0)
@@ -644,6 +658,7 @@ void updateDateTime(loginT loginData)
 	diag=timeinfo.tm_mday-1;
 	yearg=timeinfo.tm_year+1900;
 	horag=timeinfo.tm_hour;
+	yearDay=timeinfo.tm_yday;
 	struct timeval now = { .tv_sec = loginData.thedate, .tv_usec=0};
 	settimeofday(&now, NULL);
 }
@@ -901,6 +916,7 @@ void logIn()
 	oldMesg=mesg;
 	oldDiag=diag;
 	oldHorag=horag;
+	oldYearDay=yearDay;
 
 	if(theConf.traceflag & (1<<CMDD))
 		printf("%sLogin year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);

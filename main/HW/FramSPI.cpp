@@ -441,17 +441,6 @@ void FramSPI::getDeviceID(uint16_t *manufacturerID, uint16_t *productID)
 
 }
 
-uint16_t date2daysSPI(uint16_t y, uint8_t m, uint8_t d) {
-	uint8_t daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };//offsets 0,31,59,90,120,151,181,212,243,273,304,334, +1 if leap year
-	uint16_t days = d;
-	for (uint8_t i = 0; i < m; i++)
-		days += daysInMonth[ i];
-	if (m > 1 && y % 4 == 0)
-		++days;
-	return days ;
-
-}
-
 int FramSPI::read_tarif_bytes(uint32_t add,uint8_t*  donde,uint32_t cuantos)
 {
 	int ret;
@@ -562,10 +551,11 @@ int FramSPI::write_monthraw(uint8_t medidor,uint8_t month,uint16_t value)
 	return ret;
 }
 
-int FramSPI::write_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint16_t value)
+//int FramSPI::write_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint16_t value)
+int FramSPI::write_day(uint8_t medidor,uint16_t days,uint16_t value)
 {
 	int ret;
-	uint16_t days=date2daysSPI(yearl,month,dia);
+//	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYSTART+days*MWORD;
 //	if(theConf.traceflag & (1<<FRMCMD))
 //		printf("%sWDay Meter %d Year %d Month %d Day %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,badd);
@@ -573,10 +563,11 @@ int FramSPI::write_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,
 	return ret;
 }
 
-int FramSPI::write_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint16_t value)
+//int FramSPI::write_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint16_t value)
+int FramSPI::write_dayraw(uint8_t medidor,uint16_t days,uint16_t value)
 {
 	int ret;
-	uint16_t days=date2daysSPI(yearl,month,dia);
+//	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYRAW+days*MWORD;
 //	if(theConf.traceflag & (1<<FRMCMD))
 //		printf("%sWDayRaw Meter %d Year %d Month %d Day %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,badd);
@@ -584,10 +575,11 @@ int FramSPI::write_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t d
 	return ret;
 }
 
-int FramSPI::write_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t value)
+//int FramSPI::write_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t value)
+int FramSPI::write_hour(uint8_t medidor,uint16_t days,uint8_t hora,uint8_t value)
 {
 	int ret;
-	uint16_t days=date2daysSPI(yearl,month,dia);
+//	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURSTART+(days*24)+hora;
 //	if(theConf.traceflag & (1<<FRMCMD))
 //		printf("%sWHour Meter %d Year %d Month %d Day %d Hour %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,hora,badd);
@@ -595,10 +587,11 @@ int FramSPI::write_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia
 	return ret;
 }
 
-int FramSPI::write_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t value)
+//int FramSPI::write_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t value)
+int FramSPI::write_hourraw(uint8_t medidor,uint16_t days,uint8_t hora,uint8_t value)
 {
 	int ret;
-	uint16_t days=date2daysSPI(yearl,month,dia);
+//	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURRAW+(days*24)+hora;
 //	if(theConf.traceflag & (1<<FRMCMD))
 	//	printf("%sWHourRaw Meter %d Year %d Month %d Day %d Hour %d Add %d\n",FRMCMDT,medidor,yearl,month,dia,hora,badd);
@@ -674,10 +667,11 @@ int FramSPI::read_monthraw(uint8_t medidor,uint8_t month,uint8_t*  value)
 	return ret;
 }
 
-int FramSPI::read_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t*  value)
+//int FramSPI::read_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t*  value)
+int FramSPI::read_day(uint8_t medidor,uint16_t days,uint8_t*  value)
 {
 	int ret;
-	int days=date2daysSPI(yearl,month,dia);
+//	int days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYSTART+days*MWORD;
 	ret=read_bytes(medidor,badd,value,MWORD);
 //	if(theConf.traceflag & (1<<FRMCMD))
@@ -685,10 +679,11 @@ int FramSPI::read_day(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,u
 	return ret;
 }
 
-int FramSPI::read_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t*  value)
+//int FramSPI::read_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t*  value)
+int FramSPI::read_dayraw(uint8_t medidor,uint16_t days,uint8_t*  value)
 {
 	int ret;
-	int days=date2daysSPI(yearl,month,dia);
+//	int days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=DAYRAW+days*MWORD;
 	ret=read_bytes(medidor,badd,value,MWORD);
 //	if(theConf.traceflag & (1<<FRMCMD))
@@ -696,20 +691,22 @@ int FramSPI::read_dayraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t di
 	return ret;
 }
 
-int FramSPI::read_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
+//int FramSPI::read_hour(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
+int FramSPI::read_hour(uint8_t medidor,uint16_t days,uint8_t hora,uint8_t*  value)
 {
 	int ret;
-	uint16_t days=date2daysSPI(yearl,month,dia);
+//	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURSTART+(days*24)+hora;
 	ret=read_bytes(medidor,badd,value,1);
 //	if(theConf.traceflag & (1<<FRMCMD))
 //		printf("%sRHour Meter %d Month %d Day %d Hour %d Add %d Value %d\n",FRMCMDT,medidor,month,dia,hora,badd,(uint8_t)*value);
 	return ret;
 }
-int FramSPI::read_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
+//int FramSPI::read_hourraw(uint8_t medidor,uint16_t yearl,uint8_t month,uint8_t dia,uint8_t hora,uint8_t*  value)
+int FramSPI::read_hourraw(uint8_t medidor,uint16_t days,uint8_t hora,uint8_t*  value)
 {
 	int ret;
-	uint16_t days=date2daysSPI(yearl,month,dia);
+//	uint16_t days=date2daysSPI(yearl,month,dia);
 	uint32_t badd=HOURRAW+(days*24)+hora;
 	ret=read_bytes(medidor,badd,value,1);
 //	if(theConf.traceflag & (1<<FRMCMD))

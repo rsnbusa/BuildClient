@@ -24,6 +24,17 @@ typedef struct cmdRecord{
 
 cmdRecord cmds[MAXCMDS];
 
+
+uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
+	uint8_t daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };//offsets 0,31,59,90,120,151,181,212,243,273,304,334, +1 if leap year
+	uint16_t days = d;
+	for (uint8_t i = 0; i < m; i++)
+		days += daysInMonth[ i];
+	if (m > 1 && y % 4 == 0)
+		++days;
+	return days ;
+
+}
 int get_string(uart_port_t uart_num,uint8_t cual,char *donde)
 {
 	uint8_t ch;
@@ -250,16 +261,20 @@ void meterStatus()
 		fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
 		printf("MonthRaw[%d]Mes[%d]=%d %d\n",meter,mesg,valr,theMeters[meter].curMonthRaw);
 		valr=0;
-		fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
+	//	fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
+		fram.read_day(meter,oldYearDay,(uint8_t*)&valr);
 		printf("Day[%d]Mes[%d]Dia[%d]=%d %d\n",meter,mesg,diag,valr,theMeters[meter].curDay);
 		valr=0;
-		fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
+//		fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
+		fram.read_dayraw(meter,oldYearDay,(uint8_t*)&valr);
 		printf("DayRaw[%d]Mes[%d]Dia[%d]=%d %d\n",meter,mesg,diag,valr,theMeters[meter].curDayRaw);
 		valr=0;
-		fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+//		fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+		fram.read_hour(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("Hour[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHour);
 		valr=0;
-		fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+//		fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+		fram.read_hourraw(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("HourRaw[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHourRaw);
 		valr=0;
 		fram.read_lifedate(meter,(uint8_t*)&valr);  //should be down after scratch record???
@@ -293,13 +308,13 @@ void meterTest()
 		delay(100);
 		fram.write_monthraw(meter,0,val);
 		delay(100);
-		fram.write_day(meter,2019,0,0,val);
+		fram.write_day(meter,0,val);
 		delay(100);
-		fram.write_dayraw(meter,2019,0,0,val);
+		fram.write_dayraw(meter,0,val);
 		delay(100);
-		fram.write_hour(meter,2019,0,0,0,val);
+		fram.write_hour(meter,0,0,val);
 		delay(100);
-		fram.write_hourraw(meter,2019,0,0,0,val);
+		fram.write_hourraw(meter,0,0,val);
 		fram.write_lifedate(meter,val);
 		xSemaphoreGive(framSem);
 
@@ -313,13 +328,17 @@ void meterTest()
 		printf("Month[%d]=%d\n",meter,valr);
 		fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
 		printf("MonthRaw[%d]=%d\n",meter,valr);
-		fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
+	//	fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
+		fram.read_day(meter,oldYearDay,(uint8_t*)&valr);
 		printf("Day[%d]=%d\n",meter,valr);
-		fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
+	//	fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
+		fram.read_dayraw(meter,oldYearDay,(uint8_t*)&valr);
 		printf("DayRaw[%d]=%d\n",meter,valr);
-		fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+	//	fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+		fram.read_hour(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("Hour[%d]=%d\n",meter,valr);
-		fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+	//	fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
+		fram.read_hourraw(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("HourRaw[%d]=%d\n",meter,valr);
 		fram.read_lifedate(meter,(uint8_t*)&valr);
 		printf("LifeDate[%d]=%d\n",meter,valr);
@@ -455,9 +474,11 @@ void framDays()
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
+		int startday=date2days(yearg,month,0);//this year, this month, first day
+
 		for (int a=0;a<daysInMonth[month];a++)
 		{
-			fram.read_day(meter,yearg,month, a, (u8*)&valor);
+			fram.read_day(meter,startday+a, (u8*)&valor);
 			if(valor>0)
 				printf("M[%d]D[%d]=%d ",month,a,valor);
 		}
@@ -486,9 +507,11 @@ void framHours()
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
+		int startday=date2days(yearg,month,dia);//this year, this month, this day
+
 		for(int a=0;a<24;a++)
 		{
-			fram.read_hour(meter, yearg,month, dia, a, (u8*)&valor);
+			fram.read_hour(meter, startday, a, (u8*)&valor);
 				if(valor>0)
 					printf("M[%d]D[%d]H[%d]=%d ",month,dia,a,valor);
 		}
@@ -519,7 +542,9 @@ void framHourSearch()
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
-		fram.read_hour(meter, yearg,month, dia, hora,(u8*)&valor);
+		int startday=date2days(yearg,month,dia);//this year, this month, first day
+
+		fram.read_hour(meter, startday, hora,(u8*)&valor);
 		xSemaphoreGive(framSem);
 		if(valor>0)
 			printf("Date %d/%d/%d %d:00:00=%d\n",yearg,month,dia,hora,valor);
@@ -547,7 +572,9 @@ void framDaySearch()
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
-		fram.read_day(meter, yearg,month, dia,(u8*)&valor);
+		int startday=date2days(yearg,month,dia);//this year, this month, first day
+
+		fram.read_day(meter, startday,(u8*)&valor);
 		xSemaphoreGive(framSem);
 		if(valor>0)
 			printf("Date %d/%d/%d =%d\n",yearg,month,dia,valor);

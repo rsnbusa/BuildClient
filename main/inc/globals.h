@@ -25,7 +25,7 @@ EXTERN QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;
 EXTERN SemaphoreHandle_t 				wifiSem,framSem;
 EXTERN char 							TAG[20];
 EXTERN EventGroupHandle_t 				wifi_event_group;
-EXTERN u16                  			diaHoraTarifa,yearDay,llevoMsg,waitQueue,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
+EXTERN u16                  			diaHoraTarifa,yearDay,oldYearDay,llevoMsg,waitQueue,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
 EXTERN u32								sentTotal,sendTcp,totalMsg[MAXDEVS],theMacNum,totalPulses;
 EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12];
 EXTERN host_t							setupHost[MAXDEVS];
