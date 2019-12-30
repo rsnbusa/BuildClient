@@ -18,7 +18,7 @@ EXTERN config_flash						theConf;
 EXTERN int 								WIFI_BIT;
 EXTERN FramSPI							fram;
 EXTERN gpio_config_t 					io_conf;
-EXTERN int								gsock;
+EXTERN int								gsock,starthora,startday,startmonth,startyear;
 EXTERN meterType						theMeters[MAXDEVS];
 EXTERN nvs_handle 						nvshandle;
 EXTERN QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;

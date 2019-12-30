@@ -40,19 +40,21 @@ void hourChange()
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		if(theConf.traceflag & (1<<TIMED))
-			printf("%sHour change meter %d val %d\n",TIEMPOT,a,theMeters[a].curHour);
+			printf("%sHour change meter %d val %d day %d\n",TIEMPOT,a,theMeters[a].curHour,oldYearDay);
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
 		//	fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
 		//	fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
-			fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
-			fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
+			fram.write_hour(a, oldYearDay,oldHorag, starthora);//write old one before init new
+			fram.write_hourraw(a,oldYearDay,oldHorag, starthora);//write old one before init new
+	//		fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
+	//		fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
 			xSemaphoreGive(framSem);
 		}
 		theMeters[a].curHour=0; //init it
 		theMeters[a].curHourRaw=0;
 	}
-	sendStatusMeterAll();
+//	sendStatusMeterAll();
 	oldHorag=horag;
 }
 
@@ -116,6 +118,10 @@ void check_date_change()
 		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
 				timep.tm_min,timep.tm_sec,yearDay);
 
+	oldHorag=starthora;
+	oldDiag=startday;
+	oldMesg=startmonth;
+	oldYearDay=startyear;
 	//if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
 	//	return;
 //hours is a FACT that should change due to timer being fired every 1 hour
@@ -142,13 +148,48 @@ static void timeKeeper(void *pArg)
 	time(&now);
 	int faltan=3600- (now % 3600)+2; //second to next hour +2 secs
 	if(theConf.traceflag & (1<<TIMED))
-		printf("%sSecs to Hour %d now %d\n",TIEMPOT,faltan,(u32)now);
+		printf("%sNSecs to Hour %d now %d\n",TIEMPOT,faltan,(u32)now);
+	starthora=0;
+	startday=diag;
+	startmonth=mesg;
+	startyear=oldYearDay;
 
-	delay(faltan*QUE);
+//	delay(faltan*QUE);
+	delay(faltan);
 	while(true)
 	{
+		printf("TimeKeeper YDAY %d Mon %d Day %d hour %d\n",startday,startmonth,startday,starthora);
 		check_date_change();
-		delay(3600000);//every hour
+		starthora++;
+		delay(1000);//every hour
+		if(starthora>23)
+		{
+			printf("%sEnd Hours. Flash Button to continue\n%s",CYAN,RESETC);
+			while(1)
+			{
+				delay(100);
+				if(!gpio_get_level((gpio_num_t)0))
+				{
+					starthora=0;
+					startday++;
+					startyear++;
+
+					if(startday>daysInMonth[startmonth]-1)
+					{
+						startday=0;
+						startmonth++;
+						if(startmonth>11)
+						{
+							startmonth=0;
+							startyear=0;
+						}
+						printf("%sNew Month %d ",MAGENTA,startmonth);
+					}
+					printf("%sDay %d%s\n",GREEN,startday,RESETC);
+					break;
+				}
+			}
+		}
 	}
 }
 

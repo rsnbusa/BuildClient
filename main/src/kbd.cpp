@@ -120,7 +120,7 @@ int askMeter()
 		return len;
 	else
 	{
-		printf("%sMeter out of range 0-%d%s\n",MAGENTA,MAXDEVS,RESETC);
+		printf("%sMeter out of range 0-%d%s\n",MAGENTA,MAXDEVS-1,RESETC);
 		return -1;
 	}
 }
@@ -189,7 +189,7 @@ int askDay(int month)
 		return len;
 	else
 	{
-		printf("%sDay out of range 0-%d%s\n",MAGENTA,daysInMonth[month],RESETC);
+		printf("%sDay out of range 0-%d%s\n",MAGENTA,daysInMonth[month]-1,RESETC);
 		return -1;
 	}
 }
