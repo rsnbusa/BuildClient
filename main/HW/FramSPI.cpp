@@ -2,11 +2,8 @@
 #include "defines.h"
 #define GLOBAL
 #include "globals.h"
-// file spi_caps.h in soc/esp32/include/soc has parameter SOC_SPI_MAXIMUM_BUFFER_SIZE set to 64. Max bytes in Halfduplex. changed to 1024
+// file spi_caps.h in soc/esp32/include/soc has parameter SOC_SPI_MAXIMUM_BUFFER_SIZE set to 64. Max bytes in Halfduplex.
 #include "soc/spi_caps.h"
-//extern config_flash					theConf;
-extern void delay(uint32_t a);
-extern bool df;
 
 #define DEBUGMQQT
 /*========================================================================*/
@@ -28,81 +25,6 @@ FramSPI::FramSPI(void)
 	manufID=0;
 }
 
-/*========================================================================*/
-/*                           PUBLIC FUNCTIONS                             */
-/*========================================================================*/
-
-/**************************************************************************/
-/*!
- Send SPI Cmd. JUST the cmd.
- */
-/**************************************************************************/
-int  FramSPI::sendCmd (uint8_t cmd)
-{
-	esp_err_t ret;
-	spi_transaction_t t;
-	memset(&t, 0, sizeof(t));       //Zero out the transaction
-	t.tx_data[0]=cmd;
-	t.length=8;                     //Command is 8 bits
-	t.flags=SPI_TRANS_USE_TXDATA;
-	// Nov 22/2019 polling mode new cmd. Will block until transmitted
-    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-
-	return ret;
-
-}
-
-
-/**************************************************************************/
-/*!
- Status SPI Cmd.
- */
-/**************************************************************************/
-int  FramSPI::readStatus ( uint8_t* donde)
-{
-	esp_err_t ret;
-	spi_transaction_t t;
-	memset(&t, 0, sizeof(t));       //Zero out the transaction
-	t.length=8;                     //Command is 8 bits
-	t.rxlength=8;
-	t.tx_data[0]=MBRSPI_RDSR;
-	t.flags=SPI_TRANS_USE_TXDATA|SPI_TRANS_USE_RXDATA;
-    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-    *donde=t.rx_data[0];
-	return ret;
-}
-
-int  FramSPI::writeStatus ( uint8_t streg)
-{
-	esp_err_t ret;
-	spi_transaction_t t;
-	memset(&t, 0, sizeof(t));       //Zero out the transaction
-	t.tx_data[0]=MBRSPI_WRSR;
-	t.tx_data[1]=streg;
-	t.length=16;                     //Command is 8 bits
-	t.flags=SPI_TRANS_USE_TXDATA;
-    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-	return ret;
-}
-
-void FramSPI::setWrite()
-{
-	int countst=10;
-	uint8_t st=0;
-
-	while(countst>0 && st!=2)
-	{
-		readStatus(&st);
-		st=st&2;
-		if(st!=2)
-		{
-			sendCmd(MBRSPI_WREN);
-			countst--;
-			delay(1);
-		}
-	}
-
-}
 bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framSem)
 {
 	int ret;
@@ -123,8 +45,8 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	ret=spi_bus_initialize(VSPI_HOST, &buscfg, 0);
 	assert(ret == ESP_OK);
 
-//	devcfg .clock_speed_hz=SPI_MASTER_FREQ_26M;              	//Clock out at 26 MHz
-	devcfg .clock_speed_hz=8000000;              	//Clock out for test in Saleae limited speed
+	devcfg .clock_speed_hz=SPI_MASTER_FREQ_26M;              	//Clock out at 26 MHz
+	devcfg .clock_speed_hz=SPI_MASTER_FREQ_8M;              	//Clock out for test in Saleae clone limited speed
 	devcfg.mode=0;                                	//SPI mode 0
 	devcfg.spics_io_num=CS;               			//CS pin
 	devcfg.queue_size=7;                         	//We want to be able to queue 7 transactions at a time
@@ -135,6 +57,9 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	if (ret==ESP_OK)
 	{
 		getDeviceID(&manufID, &prodId);
+
+		if(theConf.traceflag & (1<<FRAMD))
+			printf("%sManufacturerId %04x ProductId %04x\n",FRAMDT,manufID,prodId);
 
 		//Set write enable after chip is identified
 		switch(prodId)
@@ -189,6 +114,196 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	}
 	return false;
 }
+
+/*========================================================================*/
+/*                           PUBLIC FUNCTIONS                             */
+/*========================================================================*/
+
+/**************************************************************************/
+/*!
+ Send SPI Cmd. JUST the cmd.
+ */
+/**************************************************************************/
+int  FramSPI::sendCmd (uint8_t cmd)
+{
+	esp_err_t ret;
+	spi_transaction_ext_t t;
+
+	memset(&t, 0, sizeof(t));       //Zero out the transaction no need to set to 0 or null unused params
+
+	t.base.flags= 		( SPI_TRANS_VARIABLE_CMD );
+	t.base.cmd=			cmd;
+	t.command_bits = 	8;
+
+	ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit!
+	return ret;
+
+}
+
+/**************************************************************************/
+/*!
+ Status SPI Cmd.
+ */
+/**************************************************************************/
+int  FramSPI::readStatus ( uint8_t* donde)
+{
+	esp_err_t ret;
+	spi_transaction_ext_t t;
+
+	memset(&t, 0, sizeof(t));       //Zero out the transaction no need to set to 0 or null unused params
+
+	t.base.flags= 		( SPI_TRANS_VARIABLE_CMD | SPI_TRANS_USE_RXDATA );
+	t.base.cmd=			MBRSPI_RDSR;
+	t.base.rxlength=	8;
+	t.command_bits = 	8;                                                    //zero command bits
+	ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit!
+    *donde=t.base.rx_data[0];
+	return ret;
+}
+
+int  FramSPI::writeStatus ( uint8_t streg)
+{
+	esp_err_t ret;
+	spi_transaction_t t;
+	memset(&t, 0, sizeof(t));       //Zero out the transaction
+	t.tx_data[0]=MBRSPI_WRSR;
+	t.tx_data[1]=streg;
+	t.length=16;                     //Command is 8 bits
+	t.flags=SPI_TRANS_USE_TXDATA;
+    ret=spi_device_polling_transmit(spi, &t);  //Transmit!
+	return ret;
+}
+
+void FramSPI::setWrite()
+{
+	int countst=10;
+	uint8_t st=0;
+
+	while(countst>0 && st!=2)
+	{
+		readStatus(&st);
+		st=st&2;
+		if(st!=2)
+		{
+			sendCmd(MBRSPI_WREN);
+			countst--;
+		}
+	}
+}
+
+
+int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
+{
+	spi_transaction_ext_t t;
+	esp_err_t ret=0;
+	int count,fueron;
+
+	memset(&t,0,sizeof(t));	//Zero out the transaction no need to set to 0 or null unused params
+	count=son;
+
+	while(count>0)
+	{
+		fueron=				count>TXL?TXL:count;
+		t.base.flags= 		( SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD );
+		t.base.addr = 		(uint8_t) framAddr;
+		t.base.length = 	fueron*8;
+		t.base.tx_buffer = 	valores;
+
+		t.base.cmd=			MBRSPI_WRITE;
+		t.command_bits = 	8;
+		t.address_bits = 	addressBytes*8;
+		ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit and wait!
+
+		count				-=fueron; 		// reduce bytes processed
+		framAddr			+=fueron;  	// advance Address by fueron bytes processed
+		valores				+=fueron;  	// advance Buffer to write by processed bytes
+	}
+	return ret;
+}
+
+int FramSPI::readMany (uint32_t framAddr, uint8_t *valores, uint32_t son)
+{
+	esp_err_t ret=0;
+	spi_transaction_ext_t t;
+	int cuantos,fueron;
+
+	memset(&t, 0, sizeof(t));	//Zero out the transaction no need to set to 0 or null unused params
+
+	cuantos=son;
+	while(cuantos>0)
+	{
+		fueron=				cuantos>TXL?TXL:cuantos;
+
+		t.base.flags= 		( SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD );
+		t.base.addr = 		(uint8_t) framAddr;
+		t.base.cmd=			MBRSPI_READ;
+		t.command_bits = 	8;
+		t.address_bits = 	addressBytes*8;
+		t.base.rx_buffer=	valores;
+		t.base.rxlength=	fueron*8;
+		ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);	//Transmit and wait
+
+		cuantos				-=fueron;
+		framAddr			+=fueron;
+		valores				+=fueron;
+	}
+	return ret;
+}
+
+int FramSPI::write8 (uint32_t framAddr, uint8_t value)
+{
+	esp_err_t ret;
+	spi_transaction_ext_t t;
+
+	memset(&t,0,sizeof(t));	//Zero out the transaction no need to set to 0 or null unused params
+
+	t.base.tx_data[0]=	value;
+	t.base.flags= 		( SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD| SPI_TRANS_USE_TXDATA );
+	t.base.addr = 		(uint8_t) framAddr;
+	t.base.length = 	8;
+	t.base.cmd=			MBRSPI_WRITE;
+	t.command_bits = 	8;
+	t.address_bits = 	addressBytes*8;
+	ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit and wait!
+	return ret;
+}
+
+int FramSPI::read8 (uint32_t framAddr,uint8_t *donde)
+{
+	spi_transaction_ext_t t;
+	int ret;
+
+	memset(&t, 0, sizeof(t));       //Zero out the transaction no need to set to 0 or null unused params
+
+	t.base.flags= 		( SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD| SPI_TRANS_USE_RXDATA );
+	t.base.addr = 		(uint8_t) framAddr;                                         //set address
+	t.base.cmd=			MBRSPI_READ;
+	t.command_bits = 	8;
+	t.address_bits = 	addressBytes*8;
+	t.base.rxlength=	8;
+	ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit!
+	*donde=t.base.rx_data[0];
+	return ret;
+}
+
+void FramSPI::getDeviceID(uint16_t *manufacturerID, uint16_t *productID)
+{
+	spi_transaction_ext_t t;
+
+	memset(&t, 0, sizeof(t));       //Zero out the transaction no need to set to 0 or null unused params
+
+	t.base.flags= 		( SPI_TRANS_VARIABLE_CMD| SPI_TRANS_USE_RXDATA );
+	t.base.cmd=			MBRSPI_RDID;
+	t.command_bits = 	8;
+	t.base.rxlength=	32;
+	spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit and wait!
+
+	// Shift values to separate manuf and prod IDs
+	// See p.10 of http://www.fujitsu.com/downloads/MICRO/fsa/pdf/products/memory/fram/MB85RC256V-DS501-00017-3v0-E.pdf
+	*manufacturerID=(t.base.rx_data[0]<<8)+t.base.rx_data[1];
+	*productID=(t.base.rx_data[2]<<8)+t.base.rx_data[3];
+}
+
 
 
 int FramSPI::format(uint8_t valor, uint8_t *lbuffer,uint32_t len,bool all)
@@ -269,208 +384,11 @@ int FramSPI::formatMeter(uint8_t cual, uint8_t *buffer,uint16_t len)
 		}
 		count-=len;
 		add+=len;
-		delay(2);
+	//	delay(2);
 	}
 	return ESP_OK;
 
 }
-
-int FramSPI::writeMany (uint32_t framAddr, uint8_t *valores,uint32_t son)
-{
-	spi_transaction_t t;
-	esp_err_t ret=0;
-	int count,fueron; //retries
-//	uint8_t lbuf[TXL+4];
-
-	memset(&t,0,sizeof(t));
-	count=son;
-
-	t.cmd=MBRSPI_WRITE;
-	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD;
-
-	while(count>0)
-	{
-		t.addr=framAddr;
-		fueron=count>TXL+1?TXL+1:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
-
-	//	lbuf[0]=MBRSPI_WRITE;
-//		if(addressBytes==2)
-//		{
-//	//		lbuf[1]=(framAddr & 0xff00)>>8;
-//	//		lbuf[2]=framAddr& 0xff;
-//			fueron=count>TXL+1?TXL+1:count;  //29= 32 - 3 command bytes MAX tx bytes in Half Duplex 32 bytes
-//			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
-//			t.length=(fueron+3)*8;                     //Command is  (bytes+3) *8 =32 bits
-//	//		memcpy(&lbuf[3],valores,fueron); //should check that son is less or equal to bbuffer size
-//		}
-//		else
-//		{
-//		//	lbuf[1]=(framAddr & 0xff0000)>>16;
-//		//	lbuf[2]=(framAddr & 0xff00)>>8;
-//		//	lbuf[3]=framAddr & 0xff;
-//			fueron=count>TXL?TXL:count;	//= 32 - 4 command bytes MAX tx bytes in Half Duplex 32 bytes
-//	//		t.length=(fueron+4)*8;                     //Command is  (bytes+3) *8 =32 bits
-//			t.length=(fueron+4)*8;                     //Command is  (bytes+3) *8 =32 bits
-//	//		memcpy(&lbuf[4],valores,fueron);
-//		}
-
-	//	t.tx_buffer=lbuf;
-		t.length=fueron*8;
-		t.tx_buffer=valores;
-
-		ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-		count-=fueron; // reduce bytes processed
-		framAddr+=fueron;  //advance Address by fueron bytes processed
-		valores+=fueron;  // advance Buffer to write by processed bytes
-	}
-	return ret;
-}
-
-int FramSPI::readMany (uint32_t framAddr, uint8_t *valores, uint32_t son)
-{
-	esp_err_t ret=0;
-	spi_transaction_t t;
-//	uint8_t tx[4];
-	int cuantos,fueron;
-
-//	tx[0]=MBRSPI_READ;
-	memset(&t, 0, sizeof(t));
-
-	t.cmd=MBRSPI_READ;
-	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD;
-
-	cuantos=son;
-	while(cuantos>0)
-	{
-		t.addr=framAddr;
-//		if(addressBytes == 2)
-//		{
-//			tx[1]=(framAddr & 0xff00)>>8;
-//			tx[2]=framAddr & 0xff;
-//			t.length=24;
-//		}
-//		else
-//		{
-//			tx[1]=(framAddr & 0xff0000) >>16;
-//			tx[2]=(framAddr & 0xff00)>>8;
-//			tx[3]=framAddr & 0xff;
-//			t.length=32;
-//		}
-
-	//	t.tx_buffer=&tx;
-	//	t.tx_buffer=NULL;
-		fueron=cuantos>TXL?TXL:cuantos;
-		t.rxlength=fueron*8;
-		t.rx_buffer=valores;
-		ret=spi_device_polling_transmit(spi, &t);
-		cuantos-=fueron;
-		framAddr+=fueron;
-		valores+=fueron;
-	}
-	return ret;
-}
-
-int FramSPI::write8 (uint32_t framAddr, uint8_t value)
-{
-
-	esp_err_t ret;
-	spi_transaction_t t;
-//	uint8_t data[5];
-	//int count=20; //retries
-
-	memset(&t,0,sizeof(t));
-
-	t.cmd=MBRSPI_WRITE;
-	t.addr=framAddr;
-	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD | SPI_TRANS_USE_TXDATA  ;
-
-//	if (count==0)
-	//	return -1; // error internal cant get a valid status. Defective chip or whatever
-
-//	data[0]=MBRSPI_WRITE;
-//	if(addressBytes==2)
-//	{
-//		data[1]=(framAddr &0xff00)>>8;
-//		data[2]=framAddr& 0xff;
-//		data[3]=value;
-//		t.length=32;                     //Command is 4 bytes *8 =32 bits
-//	}
-//	else
-//	{
-//		data[1]=(framAddr & 0xff0000)>>16;
-//		data[2]=(framAddr& 0xff00)>>8;
-//		data[3]=framAddr& 0xff;
-//		data[4]=value;
-//		t.length=40;                     //Command is 5 bytes *8 =402 bits
-//	}
-
-//	t.tx_buffer=&data;
-	t.length=8;
-	t.tx_data[0]=value;
-//	t.rxlength=0;
-//	t.rx_buffer=NULL;
-	ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-	return ret;
-}
-
-int FramSPI::read8 (uint32_t framAddr,uint8_t *donde)
-{
-	spi_transaction_t t;
-//	uint8_t data[4];
-	int ret;
-	memset(&t, 0, sizeof(t));       //Zero out the transaction
-
-	t.cmd=MBRSPI_READ;
-	t.addr=framAddr;
-	t.flags=SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_CMD | SPI_TRANS_USE_RXDATA  ;
-
-
-//	data[0]=MBRSPI_READ;
-//	if(addressBytes==2)
-//	{
-//		data[1]=(framAddr &0xff00)>>8;
-//		data[2]=framAddr& 0xff;
-//		t.length=24;                     //Command is 3 btyes *8 =24 bits
-//	}
-//	else
-//	{
-//		data[1]=(framAddr & 0xff0000)>>16;
-//		data[2]=(framAddr& 0xff00)>>8;
-//		data[3]=framAddr& 0xff;
-//		t.length=32;                     //Command is 4 btyes *8 =32 bits
-//	}
-
-	t.rxlength=8;
-//	t.rx_buffer=donde;
-//	t.tx_buffer=&data;
-	ret=spi_device_polling_transmit(spi, &t);  //Transmit!
-	*donde=t.rx_data[0];
-	return ret;
-
-
-}
-
-void FramSPI::getDeviceID(uint16_t *manufacturerID, uint16_t *productID)
-{
-	uint8_t aqui[4] = { 0 };
-	spi_transaction_t t;
-	uint8_t data;
-
-	memset(&t, 0, sizeof(t));       //Zero out the transaction
-	data=MBRSPI_RDID;
-	t.length=8;                     //Command is 4 byes *8 =32 bits
-	t.tx_buffer=&data;
-	t.rxlength=32;
-	t.rx_buffer=&aqui;
-	spi_device_polling_transmit(spi, &t);  //Transmit!
-
-	// Shift values to separate manuf and prod IDs
-	// See p.10 of http://www.fujitsu.com/downloads/MICRO/fsa/pdf/products/memory/fram/MB85RC256V-DS501-00017-3v0-E.pdf
-	*manufacturerID=(aqui[0]<<8)+aqui[1];
-	*productID=(aqui[2]<<8)+aqui[3];
-
-}
-
 int FramSPI::read_tarif_bytes(uint32_t add,uint8_t*  donde,uint32_t cuantos)
 {
 	int ret;
@@ -503,20 +421,18 @@ int FramSPI::read_tarif_hour(uint16_t dia,uint8_t hora,uint8_t*  donde) //Read s
 int FramSPI::write_bytes(uint8_t meter,uint32_t add,uint8_t*  desde,uint32_t cuantos)
 {
 	int ret;
-	//add+=DATAEND*meter+SCRATCH;
 	add+=DATAEND*meter;
-//	if(theConf.traceflag & (1<<FRMCMD))
-//		printf("%sWBytesMeter %d Add %d\n",FRMCMDT,meter,add);
+	if(theConf.traceflag & (1<<FRMCMD))
+		printf("%sWBytesMeter %d Add %d\n",FRMCMDT,meter,add);
 	ret=writeMany(add,desde,cuantos);
 	return ret;
 }
 
 int FramSPI::read_bytes(uint8_t meter,uint32_t add,uint8_t*  donde,uint32_t cuantos)
 {
-	//add+=DATAEND*meter+SCRATCH;
 	add+=DATAEND*meter;
-//	if(theConf.traceflag & (1<<FRMCMD))
-//		printf("%sRBytesMeter %d Add %d\n",FRMCMDT,meter,add);
+	if(theConf.traceflag & (1<<FRMCMD))
+		printf("%sRBytesMeter %d Add %d\n",FRMCMDT,meter,add);
 	int ret;
 	ret=readMany(add,donde,cuantos);
 	return ret;

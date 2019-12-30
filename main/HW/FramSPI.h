@@ -1,15 +1,8 @@
 
 #ifndef _FramSPI_H_
 #define _FramSPI_H_
-#include <stdint.h>
 #include "includes.h"
-extern "C"{
-#include "driver/spi_master.h"
-}
-//#include "spi_master.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
 #define MB85RC_DEFAULT_ADDRESS          (0x50) /* 1010 + A2 + A1 + A0 = 0x50 default */
 #define MB85RC_SLAVE_ID                 (0xF8)
 #define ACK 							true

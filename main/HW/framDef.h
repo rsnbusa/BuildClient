@@ -2,7 +2,7 @@
 #ifndef framDef_h
 #define framDef_h
 
-#define TXL 				SOC_SPI_MAXIMUM_BUFFER_SIZE-4
+#define TXL 				SOC_SPI_MAXIMUM_BUFFER_SIZE
 #define MAXDEVSS            (5)
 #define MWORD				(2)
 #define LLONG               (4)
@@ -43,7 +43,6 @@
 //SCRATCHEND(110)=0
 //TARIFADIA(110)=0
 //FINTARIFA(110)=0
-
 //BEATSTART(110)=4
 //LIFEKWH(114)=4
 //LIFEDATE(118)=4
@@ -54,6 +53,5 @@
 //HOURSTART(1634)=8784
 //HOURRAW(10418)=8784
 //DATAEND(19202)=76808
-
 //TOTALFRAM(96010) Devices 5
 

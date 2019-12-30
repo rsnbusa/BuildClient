@@ -43,8 +43,6 @@ void hourChange()
 			printf("%sHour change meter %d val %d day %d\n",TIEMPOT,a,theMeters[a].curHour,oldYearDay);
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
-		//	fram.write_hour(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHour);//write old one before init new
-		//	fram.write_hourraw(a, yearg,oldMesg,oldDiag,oldHorag, theMeters[a].curHourRaw);//write old one before init new
 			fram.write_hour(a, oldYearDay,oldHorag, starthora);//write old one before init new
 			fram.write_hourraw(a,oldYearDay,oldHorag, starthora);//write old one before init new
 	//		fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
@@ -167,8 +165,19 @@ static void timeKeeper(void *pArg)
 			printf("%sEnd Hours. Flash Button to continue\n%s",CYAN,RESETC);
 			while(1)
 			{
-				delay(100);
+			//	delay(1000);
 				if(!gpio_get_level((gpio_num_t)0))
+				{
+				//	delay(2000);
+					while(1)
+					{
+						delay(100);
+						if(!gpio_get_level((gpio_num_t)0))
+							break;
+					}
+				}
+
+				if(1)
 				{
 					starthora=0;
 					startday++;
@@ -182,6 +191,10 @@ static void timeKeeper(void *pArg)
 						{
 							startmonth=0;
 							startyear=0;
+							printf("End year\n");
+							while(1)
+								delay(1000);
+
 						}
 						printf("%sNew Month %d ",MAGENTA,startmonth);
 					}
@@ -1208,14 +1221,14 @@ void app_main()
 	if(theConf.active)
 	{
 		logIn();													//we are MeterControllers need to login to our Host Controller. For order purposes
-		//load from fram AFTER we have the date
+		//load from FRAM AFTER we have the date
 		for (int a=0;a<MAXDEVS;a++)
-		load_from_fram(a);
+			load_from_fram(a);
 
 		xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
 		pcnt_init();												// start receiving pulses
 		xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		//in charge of saving meter activity to Fram
-		xTaskCreate(&timeKeeper,"tmK",4096,NULL, 10, NULL);			// Due to Tariffs, we need to check hour,day and month changes
+	//	xTaskCreate(&timeKeeper,"tmK",4096,NULL, 10, NULL);			// Due to Tariffs, we need to check hour,day and month changes
 	}
 	else
 		xTaskCreate(&start_webserver,"web",10240,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager

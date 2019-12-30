@@ -96,12 +96,21 @@ buildClientFram.o: \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/list.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/queue.h \
  /Users/rsn/esp/esp-idf/components/esp_ringbuf/include/freertos/ringbuf.h \
+ /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h \
+ /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_common.h \
+ /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
+ /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h \
+ /Users/rsn/esp/esp-idf/components/newlib/include/sys/queue.h \
+ /Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_caps.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h \
+ /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h \
+ /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_base.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_legacy.h \
  /Users/rsn/esp/esp-idf/components/esp_wifi/include/esp_wifi_types.h \
  /Users/rsn/esp/esp-idf/components/esp_wifi/include/esp_private/esp_wifi_types_private.h \
- /Users/rsn/esp/esp-idf/components/newlib/include/sys/queue.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_interface.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_base.h \
  /Users/rsn/esp/esp-idf/components/esp_netif/include/esp_netif.h \
@@ -160,15 +169,6 @@ buildClientFram.o: \
  /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framDef.h \
  /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h \
  /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framSPI.h \
- /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h \
- /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_common.h \
- /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
- /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h \
- /Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_caps.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h \
- /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h \
- /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/event_groups.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/timers.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/task.h \
@@ -392,6 +392,26 @@ buildClientFram.o: \
 
 /Users/rsn/esp/esp-idf/components/esp_ringbuf/include/freertos/ringbuf.h:
 
+/Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h:
+
+/Users/rsn/esp/esp-idf/components/driver/include/driver/spi_common.h:
+
+/Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h:
+
+/Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h:
+
+/Users/rsn/esp/esp-idf/components/newlib/include/sys/queue.h:
+
+/Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_caps.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h:
+
+/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h:
+
+/Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h:
+
 /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event.h:
 
 /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_base.h:
@@ -401,8 +421,6 @@ buildClientFram.o: \
 /Users/rsn/esp/esp-idf/components/esp_wifi/include/esp_wifi_types.h:
 
 /Users/rsn/esp/esp-idf/components/esp_wifi/include/esp_private/esp_wifi_types_private.h:
-
-/Users/rsn/esp/esp-idf/components/newlib/include/sys/queue.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_interface.h:
 
@@ -519,24 +537,6 @@ buildClientFram.o: \
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/defines.h:
 
 /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/HW/framSPI.h:
-
-/Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h:
-
-/Users/rsn/esp/esp-idf/components/driver/include/driver/spi_common.h:
-
-/Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h:
-
-/Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h:
-
-/Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_caps.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h:
-
-/Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h:
-
-/Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/event_groups.h:
 

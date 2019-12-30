@@ -298,25 +298,17 @@ void meterTest()
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
-		printf("Fram Write Meter %d Year %d Month %d Day %d Hour %d Value %d\n",meter,yearg,mesg,diag,horag,val);
+		printf("Fram Write Meter %d Year %d Month %d Day %d Hour %d Value %d YDAY %d\n",meter,yearg,mesg,diag,horag,val,oldYearDay);
 
-		fram.write_beat(meter,val);
-		delay(100);
 		fram.write_lifekwh(meter,val);
-		delay(100);
-		fram.write_month(meter,0,val);
-		delay(100);
-		fram.write_monthraw(meter,0,val);
-		delay(100);
-		fram.write_day(meter,0,val);
-		delay(100);
-		fram.write_dayraw(meter,0,val);
-		delay(100);
-		fram.write_hour(meter,0,0,val);
-		delay(100);
-		fram.write_hourraw(meter,0,0,val);
 		fram.write_lifedate(meter,val);
-		xSemaphoreGive(framSem);
+		fram.write_month(meter,mesg,val);
+		fram.write_monthraw(meter,mesg,val);
+		fram.write_day(meter,oldYearDay,val);
+		fram.write_dayraw(meter,oldYearDay,val);
+		fram.write_hour(meter,oldYearDay,horag,val);
+		fram.write_hourraw(meter,oldYearDay,horag,val);
+		fram.write_beat(meter,val);
 
 		valr=0;
 		printf("Reading now\n");
@@ -342,6 +334,8 @@ void meterTest()
 		printf("HourRaw[%d]=%d\n",meter,valr);
 		fram.read_lifedate(meter,(uint8_t*)&valr);
 		printf("LifeDate[%d]=%d\n",meter,valr);
+		xSemaphoreGive(framSem);
+
 	}
 
 }
@@ -350,8 +344,11 @@ void webReset()
 {
 	printf("%sWeb Reseted\n",RED);
 	printf("===========%s\n",RESETC);
-	theConf.active=0;
-	memset(theConf.configured,0,sizeof(theConf.configured));
+	theConf.active=!theConf.active;
+	if(theConf.active)
+		memset(theConf.configured,3,sizeof(theConf.configured));
+	else
+		memset(theConf.configured,0,sizeof(theConf.configured));
 	write_to_flash();
 }
 

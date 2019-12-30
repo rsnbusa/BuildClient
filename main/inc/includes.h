@@ -13,6 +13,7 @@ extern "C"{
 #include "driver/gpio.h"
 #include "driver/pcnt.h"
 #include "driver/uart.h"
+#include "driver/spi_master.h"
 #include "esp_event.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
