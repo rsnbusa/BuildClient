@@ -247,13 +247,16 @@ void meterStatus()
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
-		//printf("Meter Compare test Year %d Month %d Day %d Hour %d\n",yearg,mesg,diag,horag);
+		printf("Meter Compare test Year %d Month %d Day %d Hour %d YDAY %d\n",yearg,mesg,diag,horag,oldYearDay);
+		valr=0;
+		fram.read_beat(meter,(uint8_t*)&valr);
+		printf("Beat[%d]=%d %d\n",meter,valr,theMeters[meter].currentBeat);
 		valr=0;
 		fram.read_lifekwh(meter,(uint8_t*)&valr);
 		printf("LifeKwh[%d]=%d %d\n",meter,valr,theMeters[meter].curLife);
 		valr=0;
-		fram.read_beat(meter,(uint8_t*)&valr);
-		printf("Beat[%d]=%d %d\n",meter,valr,theMeters[meter].currentBeat);
+		fram.read_lifedate(meter,(uint8_t*)&valr);  //should be down after scratch record???
+		printf("LifeDate[%d]=%d %d\n",meter,valr,theMeters[meter].lastKwHDate);
 		valr=0;
 		fram.read_month(meter,mesg,(uint8_t*)&valr);
 		printf("Month[%d]Mes[%d]=%d %d\n",meter,mesg,valr,theMeters[meter].curMonth);
@@ -276,9 +279,7 @@ void meterStatus()
 //		fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
 		fram.read_hourraw(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("HourRaw[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHourRaw);
-		valr=0;
-		fram.read_lifedate(meter,(uint8_t*)&valr);  //should be down after scratch record???
-		printf("LifeDate[%d]=%d %d\n",meter,valr,theMeters[meter].lastKwHDate);
+
 		localtime_r(&valr, &timeinfo);
 		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
 		printf("LifDate %s\n",strftime_buf);
@@ -300,6 +301,7 @@ void meterTest()
 	{
 		printf("Fram Write Meter %d Year %d Month %d Day %d Hour %d Value %d YDAY %d\n",meter,yearg,mesg,diag,horag,val,oldYearDay);
 
+		fram.write_beat(meter,val);
 		fram.write_lifekwh(meter,val);
 		fram.write_lifedate(meter,val);
 		fram.write_month(meter,mesg,val);
@@ -308,14 +310,15 @@ void meterTest()
 		fram.write_dayraw(meter,oldYearDay,val);
 		fram.write_hour(meter,oldYearDay,horag,val);
 		fram.write_hourraw(meter,oldYearDay,horag,val);
-		fram.write_beat(meter,val);
 
 		valr=0;
 		printf("Reading now\n");
-		fram.read_lifekwh(meter,(uint8_t*)&valr);
-		printf("LifeKwh[%d]=%d\n",meter,valr);
 		fram.read_beat(meter,(uint8_t*)&valr);
 		printf("Beat[%d]=%d\n",meter,valr);
+		fram.read_lifekwh(meter,(uint8_t*)&valr);
+		printf("LifeKwh[%d]=%d\n",meter,valr);
+		fram.read_lifedate(meter,(uint8_t*)&valr);
+		printf("LifeDate[%d]=%d\n",meter,valr);
 		fram.read_month(meter,mesg,(uint8_t*)&valr);
 		printf("Month[%d]=%d\n",meter,valr);
 		fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
@@ -332,8 +335,7 @@ void meterTest()
 	//	fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
 		fram.read_hourraw(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("HourRaw[%d]=%d\n",meter,valr);
-		fram.read_lifedate(meter,(uint8_t*)&valr);
-		printf("LifeDate[%d]=%d\n",meter,valr);
+
 		xSemaphoreGive(framSem);
 
 	}

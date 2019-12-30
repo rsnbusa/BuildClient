@@ -563,6 +563,7 @@ void load_from_fram(u8 meter)
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
+		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
 		fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
 		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
 		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
@@ -575,7 +576,6 @@ void load_from_fram(u8 meter)
 		fram.read_hour(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHour);
 	//	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
 		fram.read_hourraw(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHourRaw);
-		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
 		totalPulses+=theMeters[meter].currentBeat;
 		if(theConf.beatsPerKw[meter]==0)
 			theConf.beatsPerKw[meter]=800;// just in case div by 0 crash
@@ -973,7 +973,7 @@ void logIn()
 	oldYearDay=yearDay;
 
 	if(theConf.traceflag & (1<<CMDD))
-		printf("%sLogin year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);
+		printf("%sLogin year %d month %d day %d hour %d Tariff %d YDAY %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff,oldYearDay);
 
 	free(logMsg);
 	cJSON_Delete(root);
