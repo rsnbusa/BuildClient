@@ -8,7 +8,7 @@
 #define u16								uint16_t
 #define u8								uint8_t
 
-#define NKEYS							28
+#define NKEYS							30
 
 #define QDELAY							2
 #define WIFILED							2

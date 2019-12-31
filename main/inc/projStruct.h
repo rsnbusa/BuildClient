@@ -46,7 +46,7 @@ typedef enum displayType {NODISPLAY,DISPLAYIT} displayType;
 typedef enum overType {NOREP,REPLACE} overType;
 typedef enum resetType {ONCE,TIMER,REPEAT,TIMEREPEAT} resetType;
 typedef enum sendType {NOTSENT,SENT} sendType;
-enum debugflags{BOOTD,WIFID,MQTTD,PUBSUBD,OTAD,CMDD,WEBD,GEND,MQTTT,FRMCMD,INTD,FRAMD,MSGD,TIMED};
+enum debugflags{BOOTD,WIFID,MQTTD,PUBSUBD,OTAD,CMDD,WEBD,GEND,MQTTT,FRMCMD,INTD,FRAMD,MSGD,TIMED,SIMD};
 
 
 typedef struct internalHost{

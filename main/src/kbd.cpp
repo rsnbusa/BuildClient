@@ -5,12 +5,14 @@
 #include "projStruct.h"
 #include <bits/stdc++.h>
 
-#define MAXCMDS	22
+#define MAXCMDS	23
 extern void delay(uint32_t a);
 extern void write_to_flash();
 extern void sendStatusMeterAll();
 extern void load_from_fram(u8 meter);
 extern void write_to_fram(u8 meter,bool addit);
+extern void timeKeeperSim(void *pArg);
+extern void timeKeeper(void *pArg);
 
 using namespace std;
 
@@ -228,8 +230,8 @@ void confStatus()
 	{
 		localtime_r(&theConf.bornDate[a], &timeinfo);
 		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-		printf("Meter[%d] Serial %s BPW %d Born %s BornkWh %d Corte %d\n",a,theConf.medidor_id[a],theConf.beatsPerKw[a],
-				strftime_buf,theConf.bornKwh[a],theConf.diaDeCorte[a]);
+		printf("Meter[%d] Serial %s BPW %d Born %s BornkWh %d Corte %d Active %s\n",a,theConf.medidor_id[a],theConf.beatsPerKw[a],
+				strftime_buf,theConf.bornKwh[a],theConf.diaDeCorte[a],theConf.configured[a]==3?"Yes":"No");
 	}
 }
 
@@ -723,6 +725,27 @@ void showHelp()
 	printf("\n======CMDS======%s\n",RESETC);
 }
 
+void startSim()
+{
+	if(timeHandle)
+	{
+		vTaskDelete(timeHandle);
+		timeHandle=NULL;
+	}
+		if(simHandle)
+		{
+			vTaskDelete(simHandle);
+			simHandle=NULL;
+			printf("%sEnding Time Simulator and restarting TimeKeeper%s\n",CYAN,RESETC);
+			xTaskCreate(&timeKeeper,"tmSim",4096,NULL, 10, &timeHandle);			// Due to Tariffs, we need to check hour,day and month changes
+		}
+		else
+		{
+			printf("%sStarting Time Simulator%s\n",GREEN,RESETC);
+			xTaskCreate(&timeKeeperSim,"tmSim",4096,NULL, 10, &simHandle);			// Due to Tariffs, we need to check hour,day and month changes
+		}
+}
+
 void init_kbd_commands()
 {
 	strcpy((char*)&cmds[0].comando,"Config");			cmds[0].code=confStatus;
@@ -747,6 +770,7 @@ void init_kbd_commands()
 	strcpy((char*)&cmds[19].comando,"MsgDelay");		cmds[19].code=msgDelay;
 	strcpy((char*)&cmds[20].comando,"Help");			cmds[20].code=showHelp;
 	strcpy((char*)&cmds[21].comando,"Trace");			cmds[21].code=traceFlags;
+	strcpy((char*)&cmds[22].comando,"Simulation");		cmds[22].code=startSim;
 }
 
 void kbd(void *arg)

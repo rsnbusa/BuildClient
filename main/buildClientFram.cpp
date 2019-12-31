@@ -43,16 +43,23 @@ void hourChange()
 			printf("%sHour change meter %d val %d day %d\n",TIEMPOT,a,theMeters[a].curHour,oldYearDay);
 		if(xSemaphoreTake(framSem, portMAX_DELAY))
 		{
-			fram.write_hour(a, oldYearDay,oldHorag, starthora);//write old one before init new
-			fram.write_hourraw(a,oldYearDay,oldHorag, starthora);//write old one before init new
-	//		fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
-	//		fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
+			if(theConf.traceflag & (1<<SIMD))
+			{
+				fram.write_hour(a, oldYearDay,oldHorag, starthora+1);//write old one before init new
+				fram.write_hourraw(a,oldYearDay,oldHorag, starthora+1);//write old one before init new
+			}
+			else
+			{
+				fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
+				fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
+			}
 			xSemaphoreGive(framSem);
 		}
 		theMeters[a].curHour=0; //init it
 		theMeters[a].curHourRaw=0;
 	}
-//	sendStatusMeterAll();
+	if(!(theConf.traceflag & (1<<SIMD)))
+		sendStatusMeterAll();
 	oldHorag=horag;
 }
 
@@ -106,20 +113,23 @@ void check_date_change()
 	struct tm timep;
 	time(&now);
 	localtime_r(&now,&timep);
-	mesg=timep.tm_mon;   // Global Month
-	diag=timep.tm_mday-1;    // Global Day
-	yearg=timep.tm_year+1900;     // Global Year
-	horag=timep.tm_hour;     // Global Hour
+	mesg=timep.tm_mon;   			// Global Month
+	diag=timep.tm_mday-1;    		// Global Day
+	yearg=timep.tm_year+1900;   	// Global Year
+	horag=timep.tm_hour;     		// Global Hour
 	yearDay=timep.tm_yday;
 
 	if(theConf.traceflag & (1<<TIMED))
 		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
 				timep.tm_min,timep.tm_sec,yearDay);
 
-	oldHorag=starthora;
-	oldDiag=startday;
-	oldMesg=startmonth;
-	oldYearDay=startyear;
+	if(theConf.traceflag & (1<<SIMD))
+	{
+		oldHorag=starthora;
+		oldDiag=startday;
+		oldMesg=startmonth;
+		oldYearDay=startyear;
+	}
 	//if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
 	//	return;
 //hours is a FACT that should change due to timer being fired every 1 hour
@@ -137,7 +147,26 @@ void check_date_change()
 		monthChange();
 }
 
-static void timeKeeper(void *pArg)
+void timeKeeper(void *pArg)
+{
+#define QUE 1000 //used to test timer
+	time_t now;
+
+
+	time(&now);
+	int faltan=3600- (now % 3600)+2; //second to next hour +2 secs
+	if(theConf.traceflag & (1<<TIMED))
+		printf("%sSecs to Hour %d now %d\n",TIEMPOT,faltan,(u32)now);
+
+	delay(faltan*QUE);
+	while(true)
+	{
+		check_date_change();
+		delay(3600000);//every hour
+	}
+}
+
+void timeKeeperSim(void *pArg)
 {
 #define QUE 1000 //used to test timer
 	time_t now;
@@ -165,10 +194,10 @@ static void timeKeeper(void *pArg)
 			printf("%sEnd Hours. Flash Button to continue\n%s",CYAN,RESETC);
 			while(1)
 			{
-			//	delay(1000);
+				delay(1000);
 				if(!gpio_get_level((gpio_num_t)0))
 				{
-				//	delay(2000);
+					delay(2000);
 					while(1)
 					{
 						delay(100);
@@ -192,8 +221,8 @@ static void timeKeeper(void *pArg)
 							startmonth=0;
 							startyear=0;
 							printf("End year\n");
-							while(1)
-								delay(1000);
+						//	while(1)
+//								delay(1000);
 
 						}
 						printf("%sNew Month %d ",MAGENTA,startmonth);
@@ -1139,6 +1168,7 @@ void init_vars()
 		strcpy(lookuptable[11],"FRAMD");
 		strcpy(lookuptable[12],"MSGD");
 		strcpy(lookuptable[13],"TIMED");
+		strcpy(lookuptable[14],"SIMD");
 
 		string debugs;
 
@@ -1228,7 +1258,7 @@ void app_main()
 		xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
 		pcnt_init();												// start receiving pulses
 		xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		//in charge of saving meter activity to Fram
-	//	xTaskCreate(&timeKeeper,"tmK",4096,NULL, 10, NULL);			// Due to Tariffs, we need to check hour,day and month changes
+		xTaskCreate(&timeKeeper,"tmK",4096,NULL, 10, &timeHandle);			// Due to Tariffs, we need to check hour,day and month changes
 	}
 	else
 		xTaskCreate(&start_webserver,"web",10240,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager

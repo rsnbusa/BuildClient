@@ -29,7 +29,7 @@ EXTERN u16                  			diaHoraTarifa,yearDay,oldYearDay,llevoMsg,waitQue
 EXTERN u32								sentTotal,sendTcp,totalMsg[MAXDEVS],theMacNum,totalPulses;
 EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12];
 EXTERN host_t							setupHost[MAXDEVS];
-EXTERN TaskHandle_t						webHandle;
+EXTERN TaskHandle_t						webHandle,timeHandle,simHandle;
 
 
 #endif /* MAIN_INC_GLOBALS_H_ */

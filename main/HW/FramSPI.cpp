@@ -46,7 +46,7 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	assert(ret == ESP_OK);
 
 	devcfg .clock_speed_hz=SPI_MASTER_FREQ_26M;              	//Clock out at 26 MHz
-	devcfg .clock_speed_hz=SPI_MASTER_FREQ_8M;              	//Clock out for test in Saleae clone limited speed
+//	devcfg .clock_speed_hz=SPI_MASTER_FREQ_8M;              	//Clock out for test in Saleae clone limited speed
 	devcfg.mode=0;                                	//SPI mode 0
 	devcfg.spics_io_num=CS;               			//CS pin
 	devcfg.queue_size=7;                         	//We want to be able to queue 7 transactions at a time
