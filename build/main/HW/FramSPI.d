@@ -106,6 +106,14 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_reg.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h \
+ /Users/rsn/esp/esp-idf/components/driver/include/driver/i2c.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/I2C.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/SSD1306.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/SSD1306Wire.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/OLEDDisplay.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/OLEDDisplayFonts.h \
+ /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
+ /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_base.h \
  /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_legacy.h \
@@ -149,8 +157,6 @@ HW/FramSPI.o: \
  /Users/rsn/esp/esp-idf/components/esp_netif/include/esp_netif_sta_list.h \
  /Users/rsn/esp/esp-idf/components/esp_http_server/include/esp_http_server.h \
  /Users/rsn/esp/esp-idf/components/nghttp/port/include/http_parser.h \
- /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
- /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/app_update/include/esp_ota_ops.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_partition.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_flash.h \
@@ -411,6 +417,22 @@ HW/FramSPI.o: \
 
 /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_types.h:
 
+/Users/rsn/esp/esp-idf/components/driver/include/driver/i2c.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/I2C.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/SSD1306.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/SSD1306Wire.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/OLEDDisplay.h:
+
+/Users/rsn/Desktop/MeterBuilding/buildClientFram/main/inc/OLEDDisplayFonts.h:
+
+/Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
+
+/Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h:
+
 /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event.h:
 
 /Users/rsn/esp/esp-idf/components/esp_event/include/esp_event_base.h:
@@ -496,10 +518,6 @@ HW/FramSPI.o: \
 /Users/rsn/esp/esp-idf/components/esp_http_server/include/esp_http_server.h:
 
 /Users/rsn/esp/esp-idf/components/nghttp/port/include/http_parser.h:
-
-/Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
-
-/Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h:
 
 /Users/rsn/esp/esp-idf/components/app_update/include/esp_ota_ops.h:
 

@@ -1,6 +1,7 @@
 #ifndef defines_h
 #define defines_h
 
+#define DISPLAY
 //#define HOST							//For Host Controller else MeterController
 //#define RECOVER						// If using Recover strategy. Not really worth it
 #define BDGHOSTPORT						30000
@@ -19,6 +20,9 @@
 #define FCLK							18
 #define FCS								5
 
+#define SCLW                			22      // SCL for Wire service
+#define SDAW                			21      // SDA
+
 #define MAXCHARS						40
 #define TEST
 
@@ -30,10 +34,10 @@
 #define MAXBUFF							10000
 
 #define METER0							4
-#define METER1							22
+#define METER1							14 //22
 #define METER2							16
 #define METER3							17
-#define METER4							21
+#define METER4							13 //21
 
 #define BREAK0							13
 #define BREAK1							14
@@ -69,14 +73,14 @@
 #define TIEMPOT							"\e[31m[TIMED]\e[0m"
 #define ERASET							"\e[2J"
 
-#define BLACK							"\e[30m"
+#define BLACKC							"\e[30m"
 #define RED								"\e[31m"
 #define GREEN							"\e[32m"
 #define YELLOW							"\e[33m"
 #define BLUE							"\e[34m"
 #define MAGENTA							"\e[35m"
 #define CYAN							"\e[36m"
-#define WHITE							"\e[37m"
+#define WHITEC							"\e[37m"
 #define RESETC							"\e[0m"
 
 

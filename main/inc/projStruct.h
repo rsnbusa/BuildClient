@@ -36,6 +36,11 @@ typedef struct framq{
 	bool addit;
 }framMeterType;
 
+typedef struct i2cType{
+	gpio_num_t sdaport,sclport;
+	i2c_port_t i2cport;
+} i2ctype;
+
 typedef struct pcntev{
     int unit;  // the PCNT unit that originated an interrupt
     uint32_t status; // information on the event type that caused the interrupt

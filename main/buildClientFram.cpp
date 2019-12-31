@@ -15,6 +15,13 @@ extern void start_webserver(void *arg);
 void sendStatusMeter(meterType* meter);
 void sendStatusMeterAll();
 
+
+#ifdef DISPLAY
+void clearScreen();
+void displayManager(void * pArg);
+void drawString(int x, int y, string que, int fsize, int align,displayType showit,overType erase);
+#endif
+
 uint32_t IRAM_ATTR millisISR()
 {
 	return xTaskGetTickCountFromISR() * portTICK_PERIOD_MS;
@@ -1116,6 +1123,27 @@ void framManager(void * pArg)
 	}
 }
 
+static void initI2C()
+{
+	i2cp.sdaport=(gpio_num_t)SDAW;
+	i2cp.sclport=(gpio_num_t)SCLW;
+	i2cp.i2cport=I2C_NUM_0;
+	miI2C.init(i2cp.i2cport,i2cp.sdaport,i2cp.sclport,400000,&I2CSem);//Will reserve a Semaphore for Control
+}
+
+void initScreen()
+{
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+	{
+		display.init();
+		display.flipScreenVertically();
+		display.clear();
+		drawString(64,10,"WiFi",24,TEXT_ALIGN_CENTER,DISPLAYIT,NOREP);
+		xSemaphoreGive(I2CSem);
+	}
+	else
+		printf("Failed to InitScreen\n");
+}
 void init_vars()
 {
 	   qwait=QDELAY;
@@ -1244,6 +1272,8 @@ void app_main()
     wifi_init(); 				// start the wifi
     init_fram(false);				// start the Fram Driver and load our Meters
     check_boot_options();		// see if we need to display boot stuff
+    initI2C();
+    initScreen();
 
 #ifdef TEST
 	xTaskCreate(&kbd,"kbd",4096,NULL, 4, NULL);	//debuging only
@@ -1262,6 +1292,7 @@ void app_main()
 	}
 	else
 		xTaskCreate(&start_webserver,"web",10240,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager
+		xTaskCreate(&displayManager,"dspMgr",4096,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager
 
 		theConf.lastResetCode=rtc_get_reset_reason(0);
 		time((time_t*)&theConf.lastBootDate);
