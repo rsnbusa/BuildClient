@@ -5,7 +5,7 @@
 #include "projStruct.h"
 #include <bits/stdc++.h>
 
-#define MAXCMDS	23
+#define MAXCMDS	25
 extern void delay(uint32_t a);
 extern void write_to_flash();
 extern void sendStatusMeterAll();
@@ -23,9 +23,7 @@ typedef struct cmdRecord{
     functrsn code;
 }cmdRecord;
 
-
 cmdRecord cmds[MAXCMDS];
-
 
 uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
 	uint8_t daysInMonth [12] ={ 31,28,31,30,31,30,31,31,30,31,30,31 };//offsets 0,31,59,90,120,151,181,212,243,273,304,334, +1 if leap year
@@ -219,33 +217,33 @@ void confStatus()
 	char strftime_buf[64];
 
 	printf("%s====================\nConfiguration Status\n",RED);
-	printf("====================%s\n\n",RESETC);
 
 	localtime_r(&theConf.lastBootDate, &timeinfo);
 	strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-	printf("Configuration BootCount %d LReset %x Date %s RunStatus[%s] Trace %x\n",theConf.bootcount,theConf.lastResetCode,strftime_buf,
+	printf("%sConfiguration BootCount %d LReset %x Date %s RunStatus[%s] Trace %x\n",YELLOW,theConf.bootcount,theConf.lastResetCode,strftime_buf,
 			theConf.active?"Run":"Setup",theConf.traceflag);
 
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		localtime_r(&theConf.bornDate[a], &timeinfo);
 		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-		printf("Meter[%d] Serial %s BPW %d Born %s BornkWh %d Corte %d Active %s\n",a,theConf.medidor_id[a],theConf.beatsPerKw[a],
+		printf("%sMeter[%d] Serial %s BPW %d Born %s BornkWh %d Corte %d Active %s\n",(a % 2)?CYAN:GREEN,a,theConf.medidor_id[a],theConf.beatsPerKw[a],
 				strftime_buf,theConf.bornKwh[a],theConf.diaDeCorte[a],theConf.configured[a]==3?"Yes":"No");
 	}
+	printf("====================%s\n\n",RESETC);
+
 }
 
 void meterStatus()
 {
 	uint32_t valr;
-	struct tm timeinfo;
-	char strftime_buf[64];
+
 
 	printf("%s============\nMeter status\n",RED);
-	printf("============%s\n\n",RESETC);
 	int meter=askMeter();
 	if(meter<0)
 		return;
+	printf("============%s\n\n",YELLOW);
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 	{
@@ -255,10 +253,10 @@ void meterStatus()
 		printf("Beat[%d]=%d %d\n",meter,valr,theMeters[meter].currentBeat);
 		valr=0;
 		fram.read_lifekwh(meter,(uint8_t*)&valr);
-		printf("LifeKwh[%d]=%d %d\n",meter,valr,theMeters[meter].curLife);
+		printf("LastKwh[%d]=%d %d\n",meter,valr,theMeters[meter].curLife);
 		valr=0;
-		fram.read_lifedate(meter,(uint8_t*)&valr);  //should be down after scratch record???
-		printf("LifeDate[%d]=%d %d\n",meter,valr,theMeters[meter].lastKwHDate);
+		fram.read_lifedate(meter,(uint8_t*)&valr);
+		printf("LifeDate[%d]=%d %d %s",meter,valr,theMeters[meter].lastKwHDate,ctime((time_t*)&theMeters[meter].lastKwHDate));
 		valr=0;
 		fram.read_month(meter,mesg,(uint8_t*)&valr);
 		printf("Month[%d]Mes[%d]=%d %d\n",meter,mesg,valr,theMeters[meter].curMonth);
@@ -266,25 +264,18 @@ void meterStatus()
 		fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
 		printf("MonthRaw[%d]Mes[%d]=%d %d\n",meter,mesg,valr,theMeters[meter].curMonthRaw);
 		valr=0;
-	//	fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
 		fram.read_day(meter,oldYearDay,(uint8_t*)&valr);
 		printf("Day[%d]Mes[%d]Dia[%d]=%d %d\n",meter,mesg,diag,valr,theMeters[meter].curDay);
 		valr=0;
-//		fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
 		fram.read_dayraw(meter,oldYearDay,(uint8_t*)&valr);
 		printf("DayRaw[%d]Mes[%d]Dia[%d]=%d %d\n",meter,mesg,diag,valr,theMeters[meter].curDayRaw);
 		valr=0;
-//		fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
 		fram.read_hour(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("Hour[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHour);
 		valr=0;
-//		fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
 		fram.read_hourraw(meter,oldYearDay,horag,(uint8_t*)&valr);
-		printf("HourRaw[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d\n",meter,mesg,diag,horag,valr,theMeters[meter].curHourRaw);
+		printf("HourRaw[%d]Mes[%d]Dia[%d]Hora[%d]=%d %d%s\n",meter,mesg,diag,horag,valr,theMeters[meter].curHourRaw,RESETC);
 
-		localtime_r(&valr, &timeinfo);
-		strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-		printf("LifDate %s\n",strftime_buf);
 		xSemaphoreGive(framSem);
 	}
 }
@@ -292,10 +283,12 @@ void meterStatus()
 void meterTest()
 {
 	printf("%s================\nTest Write Meter\n",RED);
-	printf("================%s\n\n",RESETC);
 
 	int meter=askMeter();
-	int val=askValue("Value");
+	int val=askValue((char*)"Value");
+	printf("================%s\n\n",RESETC);
+	if(meter<0 || val<0)
+		return;
 
 	uint32_t valr;
 
@@ -325,30 +318,24 @@ void meterTest()
 		printf("Month[%d]=%d\n",meter,valr);
 		fram.read_monthraw(meter,mesg,(uint8_t*)&valr);
 		printf("MonthRaw[%d]=%d\n",meter,valr);
-	//	fram.read_day(meter,yearg,mesg,diag,(uint8_t*)&valr);
 		fram.read_day(meter,oldYearDay,(uint8_t*)&valr);
 		printf("Day[%d]=%d\n",meter,valr);
-	//	fram.read_dayraw(meter,yearg,mesg,diag,(uint8_t*)&valr);
 		fram.read_dayraw(meter,oldYearDay,(uint8_t*)&valr);
 		printf("DayRaw[%d]=%d\n",meter,valr);
-	//	fram.read_hour(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
 		fram.read_hour(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("Hour[%d]=%d\n",meter,valr);
-	//	fram.read_hourraw(meter,yearg,mesg,diag,horag,(uint8_t*)&valr);
 		fram.read_hourraw(meter,oldYearDay,horag,(uint8_t*)&valr);
 		printf("HourRaw[%d]=%d\n",meter,valr);
 
 		xSemaphoreGive(framSem);
-
 	}
-
 }
 
 void webReset()
 {
-	printf("%sWeb Reseted\n",RED);
-	printf("===========%s\n",RESETC);
 	theConf.active=!theConf.active;
+	printf("%sWeb %s\n",RED,theConf.active?"RunConf":"SetupConf");
+	printf("===========%s\n",RESETC);
 	if(theConf.active)
 		memset(theConf.configured,3,sizeof(theConf.configured));
 	else
@@ -358,18 +345,22 @@ void webReset()
 
 void meterCount()
 {
+	time_t timeH;
+
 	int tots=0;
-	printf("%s==============\nMeter Counters\n",RED);
-	printf("==============%s\n\n",RESETC);
+	printf("%s==============\nMeter Counters%s\n",RED,RESETC);
 
 	for (int a=0;a<MAXDEVS;a++)
 	{
-
-			tots+=theMeters[a].currentBeat;
-			printf("%sMeter[%d]=%s Beats %d kWh %d BPK %d\n",YELLOW,a,RESETC,theMeters[a].currentBeat,theMeters[a].curLife,
-					theMeters[a].beatsPerkW);
+		tots+=theMeters[a].currentBeat;
+		printf("%sMeter[%d]=%s Beats %d kWh %d BPK %d\n",(a % 2)?GREEN:CYAN,a,RESETC,theMeters[a].currentBeat,theMeters[a].curLife,
+				theMeters[a].beatsPerkW);
 	}
 	printf("%sTotal Pulses rx=%s %d (%s)\n",RED,RESETC,totalPulses,tots==totalPulses?"Ok":"No");
+	fram.readMany(FRAMDATE,(uint8_t*)&timeH,sizeof(timeH));//last known date
+	printf("Last Date %s",ctime(&timeH));
+	printf("==============%s\n\n",RESETC);
+
 }
 
 void dumpCore()
@@ -384,9 +375,12 @@ void dumpCore()
 void formatFram()
 {
 	printf("%s===========\nFormat FRAM\n",RED);
+
+	int val=askValue((char*)"Init value");
 	printf("===========%s\n\n",RESETC);
 
-	int val=askValue("Init value");
+	if(val<0)
+		return;
 
 	fram.format(val,NULL,1000,true);
 	printf("Format done\n");
@@ -399,11 +393,14 @@ void formatFram()
 void readFram()
 {
 	printf("%s=========\nRead FRAM\n",RED);
-	printf("=========%s\n\n",RESETC);
 
-	uint8_t framAddress=askValue("Address");
-	int fueron=askValue("Count");
-	fram.readMany(framAddress,tempb,fueron);
+	int framAddress=askValue((char*)"Address");
+	int fueron=askValue((char*)"Count");
+	printf("=========%s\n\n",RESETC);
+	if(fueron<0 || framAddress<0)
+		return;
+
+	fram.readMany(framAddress,(uint8_t*)tempb,fueron);
 	for (int a=0;a<fueron;a++)
 		printf("%02x-",tempb[a]);
 	printf("\n");
@@ -413,10 +410,13 @@ void readFram()
 void writeFram()
 {
 	printf("%s==========\nWrite FRAM\n",RED);
-	printf("==========%s\n\n",RESETC);
 
-	uint8_t framAddress=askValue("Address");
-	uint8_t fueron=askValue("Value");
+	int framAddress=askValue((char*)"Address");
+	int fueron=askValue((char*)"Value");
+	printf("==========%s\n\n",RESETC);
+	if(fueron<0 || framAddress<0)
+		return;
+
 	fram.write8(framAddress,fueron);
 
 }
@@ -462,6 +462,7 @@ void logLevel()
 void framDays()
 {
 	uint16_t valor;
+	uint32_t tots=0;
 
 	printf("%s==================\nFram Days in Month\n",RED);
 	printf("==================%s\n",RESETC);
@@ -480,11 +481,17 @@ void framDays()
 		for (int a=0;a<daysInMonth[month];a++)
 		{
 			fram.read_day(meter,startday+a, (u8*)&valor);
-			if(valor>0)
-				printf("M[%d]D[%d]=%d ",month,a,valor);
+			if(valor>0 || (startday==yearDay && theMeters[meter].curDay>0 ))
+			{
+				if(startday==yearDay && theMeters[meter].curDay>0 )
+					printf("M[%d]D[%d]=%d RAM=%d ",month,a,valor,theMeters[meter].curDay);
+				else
+					printf("M[%d]D[%d]=%d ",month,a,valor);
+			}
+			tots+=valor;
 		}
 		xSemaphoreGive(framSem);
-		printf("\n");
+		printf(" Total=%d\n",tots);
 	}
 
 }
@@ -492,9 +499,9 @@ void framDays()
 void framHours()
 {
 	uint8_t valor;
+	uint32_t tots=0;
 
 	printf("%s=================\nFram Hours in Day\n",RED);
-	printf("=================%s\n",RESETC);
 
 	int meter=askMeter();
 	if(meter<0)
@@ -506,6 +513,8 @@ void framHours()
 	if(dia<0)
 		return;
 
+	printf("=================%s\n",RESETC);
+
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
 		int startday=date2days(yearg,month,dia);//this year, this month, this day
@@ -513,11 +522,60 @@ void framHours()
 		for(int a=0;a<24;a++)
 		{
 			fram.read_hour(meter, startday, a, (u8*)&valor);
-				if(valor>0)
-					printf("M[%d]D[%d]H[%d]=%d ",month,dia,a,valor);
+				if(valor>0 || (startday==yearDay && horag==a && theMeters[meter].curHour>0))
+				{
+					if(startday==yearDay && horag==a && theMeters[meter].curHour>0)
+						printf("%sM[%d]D[%d]H[%d]=%d RAM=%d ",(a % 2)?CYAN:GREEN,month,dia,a,valor,theMeters[meter].curHour);
+					else
+						printf("%sM[%d]D[%d]H[%d]=%d ",(a % 2)?CYAN:GREEN,month,dia,a,valor);
+				}
+				tots+=valor;
 		}
 		xSemaphoreGive(framSem);
-		printf("\n");
+		printf(" Total=%d\n",tots);
+	}
+}
+
+void framMonthsHours()
+{
+	uint8_t valor;
+	uint32_t tots=0;
+	bool was;
+
+	printf("%s=================\nFram Hours in Month\n",RED);
+
+	int meter=askMeter();
+	if(meter<0)
+		return;
+	int month=askMonth();
+	if(month<0)
+		return;
+
+	printf("=================%s\n",RESETC);
+
+	if(xSemaphoreTake(framSem, portMAX_DELAY))
+	{
+		for(int b=0;b<daysInMonth[month];b++)
+		{
+			int startday=date2days(yearg,month,b);//this year, this month, this day
+			was=false;
+			for(int a=0;a<24;a++)
+			{
+				fram.read_hour(meter, startday, a, (u8*)&valor);
+					if(valor>0 || (startday==yearDay && a==horag && theMeters[meter].curHour>0))
+					{
+						was=true;
+						if(startday==yearDay && a==horag && theMeters[meter].curHour>0)
+							printf("%sM[%d]D[%d]H[%d]=%d RAM=%d ",(a % 2)?CYAN:GREEN,month,b,a,valor,theMeters[meter].curHour);
+						else
+							printf("%sM[%d]D[%d]H[%d]=%d ",(a % 2)?CYAN:GREEN,month,b,a,valor);
+					}
+					tots+=valor;
+			}
+			if(was)
+				printf(" Total=%d\n",tots);
+		}
+			xSemaphoreGive(framSem);
 	}
 }
 
@@ -526,7 +584,6 @@ void framHourSearch()
 	uint8_t valor;
 
 	printf("%s================\nFram Hour Search\n",RED);
-	printf("================%s\n",RESETC);
 
 	int meter=askMeter();
 	if(meter<0)
@@ -541,14 +598,21 @@ void framHourSearch()
 	if(hora<0)
 		return;
 
+	printf("================%s\n",RESETC);
+
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
 		int startday=date2days(yearg,month,dia);//this year, this month, first day
 
 		fram.read_hour(meter, startday, hora,(u8*)&valor);
 		xSemaphoreGive(framSem);
-		if(valor>0)
-			printf("Date %d/%d/%d %d:00:00=%d\n",yearg,month,dia,hora,valor);
+		if(valor>0 || (horag==horag && startday==yearDay && theMeters[meter].curHour>0))
+			{
+			if(horag==horag && startday==yearDay && theMeters[meter].curHour>0)
+				printf("Date %d/%d/%d %d:00:00=%d RAM=%d\n",yearg,month,dia,hora,valor,theMeters[meter].curHour);
+			else
+				printf("Date %d/%d/%d %d:00:00=%d\n",yearg,month,dia,hora,valor);
+			}
 	}
 }
 
@@ -558,7 +622,6 @@ void framDaySearch()
 	uint16_t valor;
 
 	printf("%s===============\nFram Day Search\n",RED);
-	printf("===============%s\n",RESETC);
 
 	int meter=askMeter();
 	if(meter<0)
@@ -569,6 +632,7 @@ void framDaySearch()
 	int dia=askDay(month);
 	if(dia<0)
 		return;
+	printf("===============%s\n",RESETC);
 
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
@@ -577,8 +641,14 @@ void framDaySearch()
 
 		fram.read_day(meter, startday,(u8*)&valor);
 		xSemaphoreGive(framSem);
-		if(valor>0)
+		if(valor>0 || (theMeters[meter].curDay>0 && startday==yearDay))
+		{
+		if(theMeters[meter].curDay>0 && startday==yearDay)
+			printf("Date %d/%d/%d =%d RAM=%d\n",yearg,month,dia,valor,theMeters[meter].curDay);
+		else
 			printf("Date %d/%d/%d =%d\n",yearg,month,dia,valor);
+
+		}
 	}
 }
 
@@ -587,7 +657,6 @@ void framMonthSearch()
 	uint16_t valor;
 
 	printf("%s=================\nFram Month Search\n",RED);
-	printf("=================%s\n",RESETC);
 
 	int meter=askMeter();
 	if(meter<0)
@@ -595,13 +664,51 @@ void framMonthSearch()
 	int month=askMonth();
 	if(month<0)
 		return;
+	printf("=================%s\n",RESETC);
 
 	if(xSemaphoreTake(framSem, portMAX_DELAY))
 	{
 		fram.read_month(meter,month,(u8*)&valor);
 		xSemaphoreGive(framSem);
-		if(valor>0)
-			printf("Month[%d] =%d\n",month,valor);
+		if(valor>0 || (theMeters[meter].curMonth>0 && mesg==month))
+		{
+			if(theMeters[meter].curMonth>0 && mesg==month)
+				printf("Month[%d] =%d RAM=%d\n",month,valor,theMeters[meter].curMonth);
+			else
+				printf("Month[%d] =%d\n",month,valor);
+		}
+	}
+	printf("\n");
+}
+
+void framMonths()
+{
+	uint16_t valor;
+	uint32_t tots=0;
+
+	printf("%s=================\nFram Month All\n",RED);
+	int meter=askMeter();
+	if(meter<0)
+		return;
+	printf("=================%s\n",RESETC);
+
+	if(xSemaphoreTake(framSem, portMAX_DELAY))
+	{
+		printf("Meter[%d]",meter);
+		for(int a=0;a<12;a++)
+		{
+			fram.read_month(meter,a,(u8*)&valor);
+			if(valor>0)
+			{
+			if(theMeters[meter].curMonth>0 && a==mesg)
+				printf("%s[%d]=%d RAM=%d ",(a % 2)?CYAN:GREEN,a,valor,theMeters[meter].curMonth);
+			else
+				printf("%s[%d]=%d ",(a % 2)?CYAN:GREEN,a,valor);
+			}
+			tots+=valor;
+		}
+		printf(" Total=%d\n",tots);
+		xSemaphoreGive(framSem);
 	}
 	printf("\n");
 }
@@ -609,10 +716,10 @@ void framMonthSearch()
 void flushFram()
 {
 	printf("%s=============\nFlushing Fram\n",RED);
-	printf("=============%s\n",RESETC);
 	for(int a=0;a<MAXDEVS;a++)
 		write_to_fram(a,false);
 	printf("%d meters flushed\n",MAXDEVS);
+	printf("=============%s\n",RESETC);
 }
 
 void msgCount()
@@ -626,62 +733,71 @@ void msgCount()
 
 void traceFlags()
 {
-	char s1[20],s2[20];
+	char s1[60],s2[20];
+	char traces[20][20];
 	string ss;
 
-	printf("%sTrace Flags:\n",RED);
+	printf("%sTrace Flags:%s",RED,CYAN);
 
 	for (int a=0;a<NKEYS/2;a++)
 	if (theConf.traceflag & (1<<a))
-	{
-		if(a<(NKEYS/2)-1)
-			printf("%s-",lookuptable[a]);
-		else
-			printf("%s",lookuptable[a]);
-	}
-	printf("%s\nEnter TRACE FLAG:",RESETC);
+		printf("%s ",lookuptable[a]);
+
+	printf("%s\nEnter TRACE FLAG:%s",RED,RESETC);
 	fflush(stdout);
 	memset(s1,0,sizeof(s1));
 	get_string(UART_NUM_0,10,s1);
 	memset(s2,0,sizeof(s2));
 	for(int a=0;a<strlen(s1);a++)
 		s2[a]=toupper(s1[a]);
-	ss=string(s2);
+
 	if(strlen(s2)<=1)
 		return;
-	if(strcmp(ss.c_str(),"NONE")==0)
-	{
-		theConf.traceflag=0;
-		write_to_flash();
-		return;
-	}
-	if(strcmp(ss.c_str(),"ALL")==0)
-	{
-		theConf.traceflag=0xFFFF;
-		write_to_flash();
-		return;
-	}
-	int cualf=cmdfromstring((char*)ss.c_str());
-	if(cualf<0)
-	{
-		printf("Invalid Debug Option\n");
-		return;
-	}
-	if(cualf<NKEYS/2 )
-	{
-		printf("Debug Key %s added\n",lookuptable[cualf]);
-		theConf.traceflag |= 1<<cualf;
-		write_to_flash();
-		return;
-	}
-	else
-	{
-		cualf=cualf-NKEYS/2;
-		printf("Debug Key %s removed\n",lookuptable[cualf]);
-		theConf.traceflag ^= (1<<cualf);
-		write_to_flash();
-		return;
-	}
+
+	  char *ch;
+	  ch = strtok(s2, ",");
+	  while (ch != NULL)
+	  {
+		  ss=string(ch);
+	//	  printf("%s\n", ch);
+		  ch = strtok(NULL, " ,");
+
+		if(strcmp(ss.c_str(),"NONE")==0)
+		{
+			theConf.traceflag=0;
+			write_to_flash();
+			return;
+		}
+
+		if(strcmp(ss.c_str(),"ALL")==0)
+		{
+			theConf.traceflag=0xFFFF;
+			write_to_flash();
+			return;
+		}
+
+		int cualf=cmdfromstring((char*)ss.c_str());
+		if(cualf<0)
+		{
+			printf("Invalid Debug Option\n");
+			return;
+		}
+		if(cualf<NKEYS/2 )
+		{
+			printf("%s%s+ ",GREEN,lookuptable[cualf]);
+			theConf.traceflag |= 1<<cualf;
+			write_to_flash();
+		}
+		else
+		{
+			cualf=cualf-NKEYS/2;
+			printf("%s%s- ",RED,lookuptable[cualf]);
+			theConf.traceflag ^= (1<<cualf);
+			write_to_flash();
+		}
+
+	  }
+	  printf("%s\n",RESETC);
 }
 
 
@@ -689,14 +805,14 @@ void waitDelay()
 {
 	printf("%s==============\nWait Delay(%dms)\n",RED,sendTcp);
 	printf("==============%s\n",RESETC);
-	sendTcp=askValue("Value");
+	sendTcp=askValue((char*)"Value");
 }
 
 void msgDelay()
 {
 	printf("%s=============\nMsg Delay(%dms)\n",RED,qdelay);
 	printf("=============%s\n",RESETC);
-	qdelay=askValue("Value");
+	qdelay=askValue((char*)"Value");
 }
 
 bool compareCmd(cmdRecord r1, cmdRecord r2)
@@ -727,6 +843,9 @@ void showHelp()
 
 void startSim()
 {
+	int cuanto=0;
+	int len;
+	char s1[10];
 	if(timeHandle)
 	{
 		vTaskDelete(timeHandle);
@@ -742,7 +861,20 @@ void startSim()
 		else
 		{
 			printf("%sStarting Time Simulator%s\n",GREEN,RESETC);
-			xTaskCreate(&timeKeeperSim,"tmSim",4096,NULL, 10, &simHandle);			// Due to Tariffs, we need to check hour,day and month changes
+			printf("%s==============\nHour Delay(ms)\n",RED);
+			cuanto=askValue((char*)"Value");
+			printf("\nFormat?");
+			fflush(stdout);
+			len=get_string(UART_NUM_0,10,s1);
+			if(len>0)
+			{
+				if(s1[0]=='y' || s1[0]=='Y')
+					formatFram();
+
+			}
+			printf("==============%s\n",RESETC);
+
+			xTaskCreate(&timeKeeperSim,"tmSim",4096,(void*)cuanto, 10, &simHandle);			// Due to Tariffs, we need to check hour,day and month changes
 		}
 }
 
@@ -771,6 +903,8 @@ void init_kbd_commands()
 	strcpy((char*)&cmds[20].comando,"Help");			cmds[20].code=showHelp;
 	strcpy((char*)&cmds[21].comando,"Trace");			cmds[21].code=traceFlags;
 	strcpy((char*)&cmds[22].comando,"Simulation");		cmds[22].code=startSim;
+	strcpy((char*)&cmds[23].comando,"FramMonthsAll");	cmds[23].code=framMonths;
+	strcpy((char*)&cmds[24].comando,"FramMonthHours");	cmds[24].code=framMonthsHours;
 }
 
 void kbd(void *arg)

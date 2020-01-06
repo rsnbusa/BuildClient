@@ -71,6 +71,7 @@
 #define FRAMDT							"\e[37m[FRAMD]\e[0m"
 #define FRMCMDT							"\e[35m[FRMCMDT]\e[0m"
 #define TIEMPOT							"\e[31m[TIMED]\e[0m"
+#define SIMDT							"\e[36m[SIMD]\e[0m"
 #define ERASET							"\e[2J"
 
 #define BLACKC							"\e[30m"

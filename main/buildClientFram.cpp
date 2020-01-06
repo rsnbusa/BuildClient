@@ -38,83 +38,75 @@ void delay(uint32_t a)
 }
 
 
-void hourChange()
+static void hourChange()
 {
 	if(theConf.traceflag & (1<<TIMED))
-		printf("%sHour change Old %d New %d\n",TIEMPOT,oldHorag,horag);
+		printf("%sHour change Old %d New %d YDAY %d\n",TIEMPOT,oldHorag,horag,oldYearDay);
 
 
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		if(theConf.traceflag & (1<<TIMED))
 			printf("%sHour change meter %d val %d day %d\n",TIEMPOT,a,theMeters[a].curHour,oldYearDay);
-		if(xSemaphoreTake(framSem, portMAX_DELAY))
+		if(xSemaphoreTake(framSem, portMAX_DELAY/ portTICK_PERIOD_MS))
 		{
-			if(theConf.traceflag & (1<<SIMD))
-			{
-				fram.write_hour(a, oldYearDay,oldHorag, starthora+1);//write old one before init new
-				fram.write_hourraw(a,oldYearDay,oldHorag, starthora+1);//write old one before init new
-			}
-			else
-			{
-				fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
-				fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
-			}
+			fram.write_hour(a, oldYearDay,oldHorag, theMeters[a].curHour);//write old one before init new
+			fram.write_hourraw(a,oldYearDay,oldHorag, theMeters[a].curHourRaw);//write old one before init new
 			xSemaphoreGive(framSem);
 		}
+		theMeters[a].oldcurHour=theMeters[a].curHour;
 		theMeters[a].curHour=0; //init it
 		theMeters[a].curHourRaw=0;
 	}
-	if(!(theConf.traceflag & (1<<SIMD)))
-		sendStatusMeterAll();
+
+//	if(!(theConf.traceflag & (1<<SIMD)))
+
 	oldHorag=horag;
 }
 
-void dayChange()
+static void dayChange()
 {
 	if(theConf.traceflag & (1<<TIMED))
 		printf("%sDay change Old %d New %d\n",TIEMPOT,oldDiag,diag);
 
 
 	for (int a=0;a<MAXDEVS;a++)
-			{
-				if(theConf.traceflag & (1<<TIMED))
-					printf("%sDay change mes %d day %d oldday %d corte %d sent %d\n",TIEMPOT,oldMesg,diag,oldDiag,theConf.diaDeCorte[a],theConf.corteSent[a]);
-				if(xSemaphoreTake(framSem, portMAX_DELAY))
-				{
-				//	fram. write_day(a,yearg, oldMesg,oldDiag, theMeters[a].curDay);
-				//	fram. write_dayraw(a,yearg, oldMesg,oldDiag, theMeters[a].curDayRaw);
-					fram. write_day(a,oldYearDay, theMeters[a].curDay);
-					fram. write_dayraw(a,oldYearDay,theMeters[a].curDayRaw);
-					theMeters[a].curDay=0;
-					theMeters[a].curDayRaw=0;
-					xSemaphoreGive(framSem);
-				}
-			}
-			oldDiag=diag;
-			oldYearDay=yearDay;
+	{
+		if(theConf.traceflag & (1<<TIMED))
+			printf("%sDay change mes %d day %d oldday %d corte %d sent %d\n",TIEMPOT,oldMesg,diag,oldDiag,theConf.diaDeCorte[a],theConf.corteSent[a]);
+		if(xSemaphoreTake(framSem, portMAX_DELAY/ portTICK_PERIOD_MS))
+		{
+			fram. write_day(a,oldYearDay, theMeters[a].curDay);
+			fram. write_dayraw(a,oldYearDay,theMeters[a].curDayRaw);
+			xSemaphoreGive(framSem);
+			theMeters[a].curDay=0;
+			theMeters[a].curDayRaw=0;
+		}
+	}
+	oldDiag=diag;
+	oldYearDay=yearDay;
 }
 
-void monthChange()
+static void monthChange()
 {
 	if(theConf.traceflag & (1<<TIMED))
 		printf("%sMonth change Old %d New %d\n",TIEMPOT,oldMesg,mesg);
 
 	for (int a=0;a<MAXDEVS;a++)
-			{
-				if(xSemaphoreTake(framSem, portMAX_DELAY))
-				{
-					fram.write_month(a, oldMesg, theMeters[a].curMonth);
-					fram.write_monthraw(a, oldMesg, theMeters[a].curMonthRaw);
-					xSemaphoreGive(framSem);
-					theMeters[a].curMonth=0;
-					theMeters[a].curMonthRaw=0;
-				}
-			}
-			oldMesg=mesg;
+	{
+		if(xSemaphoreTake(framSem, portMAX_DELAY/ portTICK_PERIOD_MS))
+		{
+			fram.write_month(a, oldMesg, theMeters[a].curMonth);
+			fram.write_monthraw(a, oldMesg, theMeters[a].curMonthRaw);
+			xSemaphoreGive(framSem);
+			theMeters[a].curMonth=0;
+			theMeters[a].curMonthRaw=0;
+		}
+	}
+	oldMesg=mesg;
 }
 
-void check_date_change()
+static void check_date_change()
 {
 	time_t now;
 	struct tm timep;
@@ -127,21 +119,14 @@ void check_date_change()
 	yearDay=timep.tm_yday;
 
 	if(theConf.traceflag & (1<<TIMED))
-		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d\n",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
-				timep.tm_min,timep.tm_sec,yearDay);
+		printf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d %s",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
+				timep.tm_min,timep.tm_sec,yearDay,ctime(&now));
 
-	if(theConf.traceflag & (1<<SIMD))
-	{
-		oldHorag=starthora;
-		oldDiag=startday;
-		oldMesg=startmonth;
-		oldYearDay=startyear;
-	}
 	//if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
 	//	return;
 //hours is a FACT that should change due to timer being fired every 1 hour
 
-//	if(horag!=oldHorag) // hour change up or down
+	if(horag!=oldHorag) // hour change up or down
 		hourChange();
 
 	if(diag!=oldDiag) // day change up or down. Also hour MUST HAVE CHANGED before
@@ -152,6 +137,9 @@ void check_date_change()
 
 	if(mesg!=oldMesg) // month change up or down. What to do with prev Year???? MONTH MUST HAVE CHANGED
 		monthChange();
+
+	sendStatusMeterAll();
+
 }
 
 void timeKeeper(void *pArg)
@@ -165,11 +153,11 @@ void timeKeeper(void *pArg)
 	if(theConf.traceflag & (1<<TIMED))
 		printf("%sSecs to Hour %d now %d\n",TIEMPOT,faltan,(u32)now);
 
-	delay(faltan*QUE);
+//	delay(faltan*QUE);
 	while(true)
 	{
 		check_date_change();
-		delay(3600000);//every hour
+		delay(60000);//every minute
 	}
 }
 
@@ -177,69 +165,58 @@ void timeKeeperSim(void *pArg)
 {
 #define QUE 1000 //used to test timer
 	time_t now;
+	struct tm timep;
+	struct timeval nowt;
+	int del=(int)pArg;
+	oldHorag=0;
+	oldDiag=0;
+	oldMesg=0;
 
+	timep.tm_mon=0;
+	timep.tm_mday=1;
+	timep.tm_year=120;
+	timep.tm_hour=0;
+	timep.tm_yday=0;
+	timep.tm_min=0;
+	timep.tm_sec=0;
+	now=mktime ( &timep );//start jan 1 2020 at midnight
+	nowt.tv_sec = now;
+	nowt.tv_usec=0;
+	settimeofday(&nowt, NULL);
+	printf("%sStarting sim at %s\n",SIMDT,ctime(&now));
 
-	time(&now);
-	int faltan=3600- (now % 3600)+2; //second to next hour +2 secs
-	if(theConf.traceflag & (1<<TIMED))
-		printf("%sNSecs to Hour %d now %d\n",TIEMPOT,faltan,(u32)now);
-	starthora=0;
-	startday=diag;
-	startmonth=mesg;
-	startyear=oldYearDay;
-
-//	delay(faltan*QUE);
-	delay(faltan);
-	while(true)
+	for(int a=0;a<12;a++)	//months
 	{
-		printf("TimeKeeper YDAY %d Mon %d Day %d hour %d\n",startday,startmonth,startday,starthora);
-		check_date_change();
-		starthora++;
-		delay(1000);//every hour
-		if(starthora>23)
+		for(int b=0;b<daysInMonth[a];b++)		//days in month
 		{
-			printf("%sEnd Hours. Flash Button to continue\n%s",CYAN,RESETC);
-			while(1)
+			for (int c=0;c<24;c++)	//24 hours
 			{
-				delay(1000);
-				if(!gpio_get_level((gpio_num_t)0))
+				delay(del);			//give him time to collect some samples
+				if(!gpio_get_level((gpio_num_t)0))	//if falsh button down, pause
 				{
-					delay(2000);
+					printf("Simulation paused. FB to restart or keyboard-> Sim to kill it\n");
 					while(1)
 					{
-						delay(100);
 						if(!gpio_get_level((gpio_num_t)0))
 							break;
+						else
+							delay(100);
 					}
 				}
-
-				if(1)
-				{
-					starthora=0;
-					startday++;
-					startyear++;
-
-					if(startday>daysInMonth[startmonth]-1)
-					{
-						startday=0;
-						startmonth++;
-						if(startmonth>11)
-						{
-							startmonth=0;
-							startyear=0;
-							printf("End year\n");
-						//	while(1)
-//								delay(1000);
-
-						}
-						printf("%sNew Month %d ",MAGENTA,startmonth);
-					}
-					printf("%sDay %d%s\n",GREEN,startday,RESETC);
-					break;
-				}
+				time(&now);
+				nowt.tv_sec = now+3600;//one hour elapsed
+				nowt.tv_usec=0;
+				settimeofday(&nowt, NULL);
+				time(&now);
+				printf("%sNew Time %s",SIMDT,ctime(&now));
+				check_date_change();
 			}
 		}
 	}
+	printf("%sSimulationtrace done. Launching TimeKeeper\n",SIMDT);
+	simHandle=NULL;
+	xTaskCreate(&timeKeeper,"tmSim",4096,NULL, 10, &timeHandle);			// Due to Tariffs, we need to check hour,day and month changes
+	vTaskDelete(NULL);
 }
 
 
@@ -379,7 +356,7 @@ static void pcnt_init(void)
 			pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_THRES_0);
 			pcnt_event_disable((pcnt_unit_t)a, PCNT_EVT_ZERO);
 
-			pcnt_set_filter_value((pcnt_unit_t)a, 1000);
+			pcnt_set_filter_value((pcnt_unit_t)a, 100);
 			pcnt_filter_enable((pcnt_unit_t)a);
 
 			pcnt_set_event_value((pcnt_unit_t)a, PCNT_EVT_THRES_1, 10);// instead of a lot of code, just lose a most 10 beats
@@ -509,7 +486,7 @@ static void recover_fram()
 void write_to_fram(u8 meter,bool addit)
 {
 	time_t timeH;
-    struct tm timeinfo;
+//    struct tm timeinfo;
 #ifdef RECOVER
 	scratchTypespi scratch;
 #endif
@@ -523,21 +500,21 @@ void write_to_fram(u8 meter,bool addit)
     }
 
     time(&timeH);
-	localtime_r(&timeH, &timeinfo);
-	mesg=timeinfo.tm_mon;
-	diag=timeinfo.tm_mday-1;
-	yearg=timeinfo.tm_year+1900;
-	horag=timeinfo.tm_hour;
-	yearDay=timeinfo.tm_yday;
+//	localtime_r(&timeH, &timeinfo);
+//	mesg=timeinfo.tm_mon;
+//	diag=timeinfo.tm_mday-1;
+//	yearg=timeinfo.tm_year+1900;
+//	horag=timeinfo.tm_hour;
+//	yearDay=timeinfo.tm_yday;
 
 	if(addit)
 	{
-		if(theConf.traceflag & (1<<FRAMD))
-			printf("W_T_FRAM Year %d Month %d Day %d Hour %d\n",yearg,mesg,diag,horag);
 		theMeters[meter].curLife++;
 		theMeters[meter].curMonth++;
 		theMeters[meter].curDay++;
 		theMeters[meter].curHour++;
+		if(theConf.traceflag & (1<<FRAMD))
+					printf("W_T_FRAM Meter %d Year %d Month %d Day %d Hour %d val=%d\n",meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
 		if(theMeters[meter].beatSaveRaw>=theMeters[meter].beatsPerkW)
 		{
 			mas=theMeters[meter].beatSaveRaw / theMeters[meter].beatsPerkW;
@@ -565,17 +542,13 @@ void write_to_fram(u8 meter,bool addit)
 
 		fram.write_beat(meter,theMeters[meter].currentBeat);
 		fram.write_lifekwh(meter,theMeters[meter].curLife);
+		fram.write_lifedate(meter,theMeters[meter].lastKwHDate);
 		fram.write_month(meter,mesg,theMeters[meter].curMonth);
 		fram.write_monthraw(meter,mesg,theMeters[meter].curMonthRaw);
-//		fram.write_day(meter,yearg,mesg,diag,theMeters[meter].curDay);
 		fram.write_day(meter,oldYearDay,theMeters[meter].curDay);
-//		fram.write_dayraw(meter,yearg,mesg,diag,theMeters[meter].curDayRaw);
 		fram.write_dayraw(meter,oldYearDay,theMeters[meter].curDayRaw);
-//		fram.write_hour(meter,yearg,mesg,diag,horag,theMeters[meter].curHour);
 		fram.write_hour(meter,oldYearDay,horag,theMeters[meter].curHour);
-//		fram.write_hourraw(meter,yearg,mesg,diag,horag,theMeters[meter].curHourRaw);
 		fram.write_hourraw(meter,oldYearDay,horag,theMeters[meter].curHourRaw);
-		fram.write_lifedate(meter,theMeters[meter].lastKwHDate);  //should be down after scratch record???
 #ifdef RECOVER
 		fram.write8(SCRATCH,0); //Fast write first byte of Scratch record to 0=done.
 #endif
@@ -604,13 +577,9 @@ void load_from_fram(u8 meter)
 		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
 		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
 		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
-	//	fram.read_day(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDay);
 		fram.read_day(meter, oldYearDay, (u8*)&theMeters[meter].curDay);
-	//	fram.read_dayraw(meter, yearg,mesg, diag, (u8*)&theMeters[meter].curDayRaw);
 		fram.read_dayraw(meter, oldYearDay, (u8*)&theMeters[meter].curDayRaw);
-	//	fram.read_hour(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHour);
 		fram.read_hour(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHour);
-	//	fram.read_hourraw(meter, yearg,mesg, diag, horag, (u8*)&theMeters[meter].curHourRaw);
 		fram.read_hourraw(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHourRaw);
 		totalPulses+=theMeters[meter].currentBeat;
 		if(theConf.beatsPerKw[meter]==0)
@@ -620,6 +589,9 @@ void load_from_fram(u8 meter)
 		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*theConf.beatsPerKw[meter]);
 		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
 		xSemaphoreGive(framSem);
+
+		oldCurLife[meter]=0;//for display
+		oldCurLife[meter]=0;
 
 		if(theConf.traceflag & (1<<FRAMD))
 			printf("[FRAMD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
@@ -730,12 +702,12 @@ static void wifi_init(void)
 	    }
 }
 
-void updateDateTime(loginT loginData)
+static void updateDateTime(loginT loginData)
 {
     struct tm timeinfo;
 
 	if(theConf.traceflag & (1<<FRMCMD))
-		printf("%sLogin Date %d Tariff %d\n",FRMCMDT,(int)loginData.thedate,loginData.theTariff);
+		printf("%s Login Date %d Tariff %d\n",FRMCMDT,(int)loginData.thedate,loginData.theTariff);
 
 	localtime_r(&loginData.thedate, &timeinfo);
 	diaHoraTarifa=loginData.theTariff;// Host will give us Hourly Tariff. No need to store
@@ -744,30 +716,36 @@ void updateDateTime(loginT loginData)
 	{
 		printf("%sYear %d Month %d Day %d Hour %d\n",FRMCMDT,timeinfo.tm_year+1900,timeinfo.tm_mon,timeinfo.tm_mday-1,timeinfo.tm_hour);
 	}
+
 	mesg=timeinfo.tm_mon;
 	diag=timeinfo.tm_mday-1;
 	yearg=timeinfo.tm_year+1900;
 	horag=timeinfo.tm_hour;
 	yearDay=timeinfo.tm_yday;
+
 	struct timeval now = { .tv_sec = loginData.thedate, .tv_usec=0};
 	settimeofday(&now, NULL);
+	fram.writeMany(FRAMDATE,(uint8_t*)&loginData.thedate,sizeof(loginData.thedate));//last known date
 }
 
-cJSON *makeCmdcJSON(meterType *meter)
+static cJSON *makeCmdcJSON(meterType *meter,bool ans)
 {
+
 	cJSON *cmdJ=cJSON_CreateObject();
-	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
+	//cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
 	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
-	cJSON_AddStringToObject(cmdJ,"MeterId",			meter->serialNumber);
-	cJSON_AddNumberToObject(cmdJ,"Transactions",	++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
+	cJSON_AddStringToObject(cmdJ,"mid",				theConf.medidor_id[meter->pos]);
+	cJSON_AddNumberToObject(cmdJ,"Ts",				++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
 	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
 	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
 	cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
-	cJSON_AddNumberToObject(cmdJ,"macn",			theMacNum);
+	cJSON_AddBoolToObject(cmdJ,"reply",				ans);
+
+
 	return cmdJ;
 }
 
-cJSON* makecJSONMeter(meterType *meter)
+static cJSON* makecJSONMeter(meterType *meter)
 {
 	cJSON *root=cJSON_CreateObject();
 
@@ -777,7 +755,7 @@ cJSON* makecJSONMeter(meterType *meter)
 		return NULL;
 	}
 
-	cJSON *cmdJ=makeCmdcJSON(meter);
+	cJSON *cmdJ=makeCmdcJSON(meter,true);
 	cJSON *ar = cJSON_CreateArray();
 
 	if(cmdJ==NULL || ar==NULL)
@@ -791,8 +769,10 @@ cJSON* makecJSONMeter(meterType *meter)
 	return root;
 }
 
-cJSON * makeGroupCmdAll()
+static cJSON * makeGroupCmdAll()
 {
+	bool ans;
+
 
 	/////// Create Message for Grouped Cmds ///////////////////
 			cJSON *root=cJSON_CreateObject();
@@ -803,20 +783,29 @@ cJSON * makeGroupCmdAll()
 			}
 
 			//already done at the beginning
-			esp_efuse_mac_get_default(them);
-			double dmac=(double)theMacNum;
+		//	esp_efuse_mac_get_default(them);
+		//	double dmac=(double)theMacNum;
 
 			cJSON *ar = cJSON_CreateArray();
 			for (int a=0;a<MAXDEVS;a++)
 			{
-				cJSON *cmdInt=makeCmdcJSON(&theMeters[a]);
+				if(a==MAXDEVS-1)
+					ans=true;
+				else
+					ans=false;
+				cJSON *cmdInt=makeCmdcJSON(&theMeters[a],ans);
 				cJSON_AddItemToArray(ar, cmdInt);
 			}
 			cJSON_AddItemToObject(root, "Batch",ar);
+			cJSON_AddStringToObject(root, "Controller","Chillo");
+		//	double dmac=(double)theMacNum;
+		//	cJSON_AddNumberToObject(root,"macn",dmac);
+			cJSON_AddNumberToObject(root,"macn",theMacNum);
+
 			return root;
 }
 
-cJSON * makeGroupCmd(meterType *pmeter)
+static cJSON * makeGroupCmd(meterType *pmeter)
 {
 	meterType meter;
 	framMeterType thisMeter;
@@ -832,8 +821,8 @@ cJSON * makeGroupCmd(meterType *pmeter)
 				printf("cannot create nroot\n");
 				return NULL;
 			}
-			esp_efuse_mac_get_default(them);
-			double dmac=(double)theMacNum;
+		//	esp_efuse_mac_get_default(them);
+		//	double dmac=(double)theMacNum;
 
 			cJSON *ar = cJSON_CreateArray();
 			cJSON *cmdJ=cJSON_CreateObject();
@@ -844,7 +833,7 @@ cJSON * makeGroupCmd(meterType *pmeter)
 			cJSON_AddNumberToObject(cmdJ,"KwH",				pmeter->curLife);
 			cJSON_AddNumberToObject(cmdJ,"Beats",			pmeter->currentBeat);
 			cJSON_AddNumberToObject(cmdJ,"Pos",				pmeter->pos);
-			cJSON_AddNumberToObject(cmdJ,"macn",			dmac);
+			cJSON_AddNumberToObject(cmdJ,"macn",			theMacNum);
 
 			totalMsg[pmeter->pos]++;
 
@@ -858,7 +847,7 @@ cJSON * makeGroupCmd(meterType *pmeter)
 				{
 					if( xQueueReceive( mqttR, &meter, 500/  portTICK_RATE_MS ))
 					{
-						cJSON *cmdInt=makeCmdcJSON(&meter);
+						cJSON *cmdInt=makeCmdcJSON(&meter,true);
 						cJSON_AddItemToArray(ar, cmdInt);
 						thisMeter.whichMeter=meter.pos;
 						thisMeter.addit=meter.saveit;
@@ -872,7 +861,7 @@ cJSON * makeGroupCmd(meterType *pmeter)
 }
 
 
-int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
+static int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 {
     int waitTime;
 	ip_addr_t 						remote;
@@ -953,27 +942,48 @@ int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 	   return -1;
 	}
 
-	to.tv_sec = 2;
-	to.tv_usec = 0;
+	 if(maxx>0)
+	 {
+		to.tv_sec = 2;
+		to.tv_usec = 0;
 
-	if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
+		if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
 
-	{
+		{
+			if(theConf.traceflag & (1<<MSGD))
+				printf("Unable to set read timeout on socket!\n");
+			return -1;
+		}
+
+		int len = recv(gsock, donde, maxx, 0);
+		int len1=len;
+//
+//		to.tv_sec = 1;
+//		to.tv_usec = 0;
+//
+//			if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
+//
+//			{
+//				if(theConf.traceflag & (1<<MSGD))
+//					printf("Unable to set read timeout on socket!\n");
+//				return -1;
+//			}
+//			len1=len;
+//
+//		void *paja=malloc(100);			//clean any other bytes received
+//		while(len>0)
+//			len = recv(gsock, paja, 100, 0);
+//		free(paja);
+
 		if(theConf.traceflag & (1<<MSGD))
-			printf("Unable to set read timeout on socket!\n");
-		return -1;
-	}
-
-	int len = recv(gsock, donde, maxx, 0);
-
-	if(theConf.traceflag & (1<<MSGD))
-		printf("%sSendmsg successful %d\n",MSGDT,len);
-
-	return len;
+			printf("%sSendmsg successful %d\n",MSGDT,len1);
+		return len1;
+	 }
+	return 0;
 }
 
 
-void logIn()
+static void logIn()
 {
     loginT loginData;
 	gpio_set_level((gpio_num_t)WIFILED, 1);
@@ -991,16 +1001,22 @@ void logIn()
 		return;
 	}
 
-	cJSON_AddStringToObject(cmdJ,"MAC",				theMac);
 	cJSON_AddStringToObject(cmdJ,"password",		"zipo");
 	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_login");
 
 	cJSON_AddItemToArray(ar, cmdJ);
 	cJSON_AddItemToObject(root, "Batch",ar);
-
+//	double dmac=(double)theMacNum;
+//	cJSON_AddNumberToObject(root,"macn",dmac);
+	cJSON_AddNumberToObject(root,"macn",theMacNum);
 	char *logMsg=cJSON_Print(root);
 
-	sendMsg((uint8_t*)logMsg,(uint8_t*)&loginData, sizeof(loginData));
+	memset((void*)&loginData,0,sizeof(loginData));
+	char *paja=(char*)malloc(100);
+	int fueron=sendMsg((uint8_t*)logMsg,(uint8_t*)paja, 100);
+	if(fueron>0)
+		memcpy((void*)&loginData,paja,sizeof(loginData));
+	free(paja);
 
 	updateDateTime(loginData);
 	oldMesg=mesg;
@@ -1029,9 +1045,18 @@ void sendStatusMeterAll()
 	fflush(stdout);
 	cJSON *root=makeGroupCmdAll();
 	char *lmessage=cJSON_Print(root);
-	sendStatus=sendMsg((uint8_t*)lmessage,(uint8_t*)&loginData,sizeof(loginData));
+	memset((void*)&loginData,0,sizeof(loginData));
+
+	//receive buffer greater than expected since we are sending 5 status messages and will receive 5 answers.
+	// if we do not do this the sendmsg socket will SAVE the other answers for next call and never gets the logindate correct
+	void *ans=malloc(100);
+	sendStatus=sendMsg((uint8_t*)lmessage,(uint8_t*)ans,100);
 	if(sendStatus>=0)
+	{
+		memcpy((void*)&loginData,ans,sizeof(loginData));
 		updateDateTime(loginData);
+	}
+	free(ans);
 	if(lmessage)
 		free(lmessage);
 	if(root)
@@ -1045,7 +1070,7 @@ void sendStatusMeterAll()
 	gpio_set_level((gpio_num_t)WIFILED, 0);
 }
 
-void sendStatusMeter(meterType* meter)
+static void sendStatusMeter(meterType* meter)
 {
     loginT 	loginData;
     int sendStatus;
@@ -1057,6 +1082,8 @@ void sendStatusMeter(meterType* meter)
 	fflush(stdout);
 	cJSON *root=makeGroupCmd(meter);
 	char *lmessage=cJSON_Print(root);
+	memset((void*)&loginData,0,sizeof(loginData));
+
 	sendStatus=sendMsg((uint8_t*)lmessage,(uint8_t*)&loginData,sizeof(loginData));
 	if(sendStatus>=0)
 		updateDateTime(loginData);
@@ -1071,7 +1098,7 @@ void sendStatusMeter(meterType* meter)
 	gpio_set_level((gpio_num_t)WIFILED, 0);
 }
 
-void erase_config() //do the dirty work
+static void erase_config() //do the dirty work
 {
 	memset(&theConf,0,sizeof(theConf));
 	theConf.centinel=CENTINEL;
@@ -1098,7 +1125,7 @@ void erase_config() //do the dirty work
 	printf("Centinel %x\n",theConf.centinel);
 }
 
-void framManager(void * pArg)
+static void framManager(void * pArg)
 {
 	framMeterType theMeter;
 
@@ -1109,8 +1136,8 @@ void framManager(void * pArg)
 			if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
 			{
 				write_to_fram(theMeter.whichMeter,theMeter.addit);
-				if(theConf.traceflag & (1<<FRAMD))
-					printf("%sSaving Meter %d add %d Beats %d\n",FRAMDT,theMeter.whichMeter,theMeter.addit,theMeters[theMeter.whichMeter].currentBeat);
+				if(theConf.traceflag & (1<<FRMCMD))
+					printf("%sSaving Meter %d add %d Beats %d\n",FRMCMDT,theMeter.whichMeter,theMeter.addit,theMeters[theMeter.whichMeter].currentBeat);
 				xSemaphoreGive(framSem);
 			}
 		}
@@ -1131,20 +1158,20 @@ static void initI2C()
 	miI2C.init(i2cp.i2cport,i2cp.sdaport,i2cp.sclport,400000,&I2CSem);//Will reserve a Semaphore for Control
 }
 
-void initScreen()
+static void initScreen()
 {
-	if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+	if(xSemaphoreTake(I2CSem, portMAX_DELAY/ portTICK_PERIOD_MS))
 	{
 		display.init();
 		display.flipScreenVertically();
 		display.clear();
-		drawString(64,10,"WiFi",24,TEXT_ALIGN_CENTER,DISPLAYIT,NOREP);
+		drawString(64,10,"MeterIoT",24,TEXT_ALIGN_CENTER,DISPLAYIT,NOREP);
 		xSemaphoreGive(I2CSem);
 	}
 	else
 		printf("Failed to InitScreen\n");
 }
-void init_vars()
+static void init_vars()
 {
 	   qwait=QDELAY;
 	   qdelay=qwait*1000;
@@ -1156,6 +1183,8 @@ void init_vars()
 	   strcpy(TAG , "BDGCLIENT");
 	   WIFI_BIT = BIT0;
 	   waitQueue=500;
+
+	   memset((void*)&theMeters,0,sizeof(theMeters));
 
 	  daysInMonth [0] =31;
 	  daysInMonth [1] =28;
@@ -1208,7 +1237,7 @@ void init_vars()
 		}
 }
 
-void check_boot_options()
+static void check_boot_options()
 {
 	char them[6];
 
@@ -1244,7 +1273,7 @@ void check_boot_options()
 	}
 }
 
-void app_main()
+static void app_main()
 {
     esp_log_level_set("*", ESP_LOG_WARN);
 

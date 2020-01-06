@@ -13,23 +13,21 @@
 using namespace std;
 
 EXTERN bool								conn,framFlag;
-EXTERN char								lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6];
+EXTERN char								lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6],TAG[20];
 EXTERN config_flash						theConf;
-EXTERN int 								WIFI_BIT;
+EXTERN EventGroupHandle_t 				wifi_event_group;
 EXTERN FramSPI							fram;
 EXTERN gpio_config_t 					io_conf;
-EXTERN int								gsock,starthora,startday,startmonth,startyear;
+EXTERN host_t							setupHost[MAXDEVS];
+EXTERN int								gsock,starthora,startday,startmonth,startyear,WIFI_BIT;
 EXTERN meterType						theMeters[MAXDEVS];
 EXTERN nvs_handle 						nvshandle;
 EXTERN QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;
 EXTERN SemaphoreHandle_t 				wifiSem,framSem,I2CSem;
-EXTERN char 							TAG[20];
-EXTERN EventGroupHandle_t 				wifi_event_group;
-EXTERN u16                  			diaHoraTarifa,yearDay,oldYearDay,llevoMsg,waitQueue,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
-EXTERN u32								sentTotal,sendTcp,totalMsg[MAXDEVS],theMacNum,totalPulses;
-EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12],lastalign,lastFont;
-EXTERN host_t							setupHost[MAXDEVS];
 EXTERN TaskHandle_t						webHandle,timeHandle,simHandle;
+EXTERN u16                  			diaHoraTarifa,yearDay,oldYearDay,llevoMsg,waitQueue,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
+EXTERN u32								sentTotal,sendTcp,totalMsg[MAXDEVS],theMacNum,totalPulses,oldCurBeat[MAXDEVS],oldCurLife[MAXDEVS];
+EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12],lastalign,lastFont;
 
 #ifdef DISPLAY
 EXTERN I2C								miI2C;

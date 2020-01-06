@@ -19,6 +19,7 @@ typedef struct meterType{
 	 u16 beatsPerkW,curMonth,curMonthRaw,curDay,curDayRaw;
 	 u32 curLife,curCycle,lastKwHDate,msNow, minamps,maxamps,currentBeat,vanMqtt,ampTime,beatSave,beatSaveRaw;
 	 u8 curHour,cycleMonth,curHourRaw,pos,pin,pinB;
+	 u8 oldcurHour;
 } meterType;
 
 typedef struct config {

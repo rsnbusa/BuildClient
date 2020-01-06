@@ -45,6 +45,8 @@ bool FramSPI::begin(int MOSI, int MISO, int CLK, int CS,SemaphoreHandle_t *framS
 	ret=spi_bus_initialize(VSPI_HOST, &buscfg, 0);
 	assert(ret == ESP_OK);
 
+
+//	devcfg .clock_speed_hz=SPI_MASTER_FREQ_40M;              	//Clock out at 26 MHz
 	devcfg .clock_speed_hz=SPI_MASTER_FREQ_26M;              	//Clock out at 26 MHz
 //	devcfg .clock_speed_hz=SPI_MASTER_FREQ_8M;              	//Clock out for test in Saleae clone limited speed
 	devcfg.mode=0;                                	//SPI mode 0
