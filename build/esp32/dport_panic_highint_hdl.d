@@ -14,7 +14,7 @@ dport_panic_highint_hdl.o: \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_context.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/xtruntime-frames.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_private/panic_reason.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/dport_reg.h \
@@ -48,7 +48,7 @@ dport_panic_highint_hdl.o: \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_private/panic_reason.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h:
 

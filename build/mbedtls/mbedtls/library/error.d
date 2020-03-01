@@ -1,7 +1,7 @@
 mbedtls/library/error.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/library/error.c \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
@@ -57,6 +57,7 @@ mbedtls/library/error.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ecp.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/gcm.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/hmac_drbg.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/md.h \
@@ -76,7 +77,9 @@ mbedtls/library/error.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/pkcs5.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/rsa.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha256.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha256_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ssl.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ssl_ciphersuites.h \
@@ -88,7 +91,7 @@ mbedtls/library/error.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h:
 
@@ -200,6 +203,8 @@ mbedtls/library/error.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h:
 
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h:
+
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/gcm.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/hmac_drbg.h:
@@ -238,7 +243,11 @@ mbedtls/library/error.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h:
 
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h:
+
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha256.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha256_alt.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h:
 

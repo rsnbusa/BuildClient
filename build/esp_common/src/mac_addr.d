@@ -15,7 +15,7 @@ src/mac_addr.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/lock.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_system.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
@@ -71,7 +71,7 @@ src/mac_addr.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_system.h:
 

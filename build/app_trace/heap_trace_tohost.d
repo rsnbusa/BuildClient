@@ -1,6 +1,6 @@
 heap_trace_tohost.o: \
  /Users/rsn/esp/esp-idf/components/app_trace/heap_trace_tohost.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/heap/include/esp_heap_trace.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -29,7 +29,7 @@ heap_trace_tohost.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/heap/include/esp_heap_trace.h:
 

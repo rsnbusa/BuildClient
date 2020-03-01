@@ -14,7 +14,7 @@ xtensa_intr_asm.o: \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/system.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/xtruntime-frames.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_context.h
 
@@ -46,7 +46,7 @@ xtensa_intr_asm.o: \
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

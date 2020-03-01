@@ -21,7 +21,7 @@ clk.o: /Users/rsn/esp/esp-idf/components/esp32/clk.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/syslimits.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/endian.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/param.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
@@ -138,7 +138,7 @@ clk.o: /Users/rsn/esp/esp-idf/components/esp32/clk.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/machine/param.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 

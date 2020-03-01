@@ -20,7 +20,7 @@ port/esp_sha.o: /Users/rsn/esp/esp-idf/components/mbedtls/port/esp_sha.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
@@ -37,8 +37,11 @@ port/esp_sha.o: /Users/rsn/esp/esp-idf/components/mbedtls/port/esp_sha.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/esp_mem.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha256.h \
- /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha256_alt.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h
 
 /Users/rsn/esp/esp-idf/components/newlib/include/string.h:
 
@@ -82,7 +85,7 @@ port/esp_sha.o: /Users/rsn/esp/esp-idf/components/mbedtls/port/esp_sha.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h:
 
@@ -116,7 +119,13 @@ port/esp_sha.o: /Users/rsn/esp/esp-idf/components/mbedtls/port/esp_sha.c \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h:
 
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h:
+
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha256.h:
 
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha256_alt.h:
+
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h:
 /Users/rsn/esp/esp-idf/components/mbedtls/port/esp_sha.c:

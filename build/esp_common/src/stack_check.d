@@ -1,6 +1,6 @@
 src/stack_check.o: \
  /Users/rsn/esp/esp-idf/components/esp_common/src/stack_check.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_system.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -32,7 +32,7 @@ src/stack_check.o: \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_idf_version.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_system.h:
 

@@ -17,7 +17,7 @@ crosscore_int.o: /Users/rsn/esp/esp-idf/components/esp32/crosscore_int.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/types.h \
@@ -132,7 +132,7 @@ crosscore_int.o: /Users/rsn/esp/esp-idf/components/esp32/crosscore_int.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h:
 

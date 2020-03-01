@@ -1,6 +1,6 @@
 esp32/rtc_time.o: /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_time.c \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_assert.h \
@@ -22,7 +22,7 @@ esp32/rtc_time.o: /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_time.c \
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc.h:
 

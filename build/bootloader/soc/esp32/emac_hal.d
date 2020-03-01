@@ -1,5 +1,5 @@
 esp32/emac_hal.o: /Users/rsn/esp/esp-idf/components/soc/esp32/emac_hal.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/gpio_periph.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/gpio_pins.h \
@@ -24,7 +24,7 @@ esp32/emac_hal.o: /Users/rsn/esp/esp-idf/components/soc/esp32/emac_hal.c \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/emac_mac_struct.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/emac_ext_struct.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 

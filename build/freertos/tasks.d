@@ -17,7 +17,7 @@ tasks.o: /Users/rsn/esp/esp-idf/components/freertos/tasks.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/esp_newlib.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -113,7 +113,7 @@ tasks.o: /Users/rsn/esp/esp-idf/components/freertos/tasks.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/esp_newlib.h:
 

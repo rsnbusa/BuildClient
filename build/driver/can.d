@@ -1,5 +1,5 @@
 can.o: /Users/rsn/esp/esp-idf/components/driver/can.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/reent.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
@@ -96,7 +96,7 @@ can.o: /Users/rsn/esp/esp-idf/components/driver/can.c \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/can.h \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/gpio.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 

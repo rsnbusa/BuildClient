@@ -45,7 +45,7 @@ syscall_table.o: /Users/rsn/esp/esp-idf/components/newlib/syscall_table.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/time.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -178,7 +178,7 @@ syscall_table.o: /Users/rsn/esp/esp-idf/components/newlib/syscall_table.c \
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

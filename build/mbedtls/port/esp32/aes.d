@@ -17,7 +17,7 @@ port/esp32/aes.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/aes.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
@@ -118,7 +118,7 @@ port/esp32/aes.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h:
 

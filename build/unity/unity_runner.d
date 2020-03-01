@@ -30,7 +30,7 @@ unity_runner.o: /Users/rsn/esp/esp-idf/components/unity/unity_runner.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/unity/include/unity_test_runner.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/setjmp.h \
@@ -104,7 +104,7 @@ unity_runner.o: /Users/rsn/esp/esp-idf/components/unity/unity_runner.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

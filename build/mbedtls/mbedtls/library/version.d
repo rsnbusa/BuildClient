@@ -1,7 +1,7 @@
 mbedtls/library/version.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/library/version.c \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
@@ -29,7 +29,7 @@ mbedtls/library/version.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h:
 

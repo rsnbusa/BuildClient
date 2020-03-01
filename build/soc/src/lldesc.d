@@ -1,6 +1,6 @@
 src/lldesc.o: /Users/rsn/esp/esp-idf/components/soc/src/lldesc.c \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -11,7 +11,7 @@ src/lldesc.o: /Users/rsn/esp/esp-idf/components/soc/src/lldesc.c \
 
 /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h:
 

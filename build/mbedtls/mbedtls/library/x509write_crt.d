@@ -1,7 +1,7 @@
 mbedtls/library/x509write_crt.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/library/x509write_crt.c \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
@@ -45,6 +45,7 @@ mbedtls/library/x509write_crt.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/platform_util.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/asn1write.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/platform_util.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
@@ -52,7 +53,7 @@ mbedtls/library/x509write_crt.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h:
 
@@ -139,6 +140,8 @@ mbedtls/library/x509write_crt.o: \
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/asn1write.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/platform_util.h:
 

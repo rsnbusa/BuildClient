@@ -1,6 +1,6 @@
 src/flash_encrypt.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/src/flash_encrypt.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
@@ -17,7 +17,7 @@ src/flash_encrypt.o: \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_secure_boot.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
 

@@ -33,7 +33,7 @@ esp_flash_api.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_flash_types.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
@@ -127,7 +127,7 @@ esp_flash_api.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

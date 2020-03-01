@@ -13,6 +13,7 @@
 
 #define QDELAY							2
 #define WIFILED							2
+#define MAXSENDERR						10
 
 //FRAM pins SPI
 #define FMOSI							23
@@ -34,9 +35,9 @@
 #define MAXBUFF							10000
 
 #define METER0							4
-#define METER1							14 //22
-#define METER2							16
-#define METER3							17
+#define METER1							16 //22
+#define METER2							17
+#define METER3							14
 #define METER4							13 //21
 
 #define BREAK0							13
@@ -45,6 +46,7 @@
 #define BREAK3							26
 #define BREAK4							27
 
+#define TRIGGER							15
 #define TIMEWAITPCNT 					60000 // 1 minute
 
 //30	Black
@@ -82,6 +84,10 @@
 #define MAGENTA							"\e[35m"
 #define CYAN							"\e[36m"
 #define WHITEC							"\e[37m"
+#define GRAY							"\e[90m"
+#define LRED							"\e[91m"
+#define LGREEN							"\e[92m"
+#define LYELLOW							"\e[93m"
 #define RESETC							"\e[0m"
 
 

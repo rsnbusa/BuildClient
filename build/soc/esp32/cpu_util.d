@@ -1,6 +1,6 @@
 esp32/cpu_util.o: /Users/rsn/esp/esp-idf/components/soc/esp32/cpu_util.c \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/cpu.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -42,7 +42,7 @@ esp32/cpu_util.o: /Users/rsn/esp/esp-idf/components/soc/esp32/cpu_util.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/cpu.h:
 

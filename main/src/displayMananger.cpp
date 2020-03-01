@@ -87,7 +87,7 @@ void drawString(int x, int y, string que, int fsize, int align,displayType showi
 
 static void displayBeats()
 {
-	uint8_t posx[MAXDEVS]={0,70,45,0,70},posy[MAXDEVS]={1,1,16,34,34};
+	uint8_t posx[MAXDEVS]={0,70,38,0,70},posy[MAXDEVS]={1,1,20,40,40};
 	char textt[20];
 	uint16_t count;
 
@@ -96,7 +96,7 @@ static void displayBeats()
 		if(theMeters[a].currentBeat>oldCurBeat[a])
 		{
 			pcnt_get_counter_value((pcnt_unit_t)a,(short int *) &count);
-			sprintf(textt,"%5d+%d",theMeters[a].currentBeat,count);
+			sprintf(textt,"%5d-%d",theMeters[a].currentBeat,count);
 			drawString(posx[a], posy[a],string(textt), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
 			oldCurBeat[a]=theMeters[a].currentBeat;
 		}
@@ -107,7 +107,7 @@ static void displayKwH()
 {
 
 	char textt[20];
-	uint8_t posx[MAXDEVS]={0,70,35,0,70},posy[MAXDEVS]={1,1,16,34,34};
+	uint8_t posx[MAXDEVS]={0,70,35,0,70},posy[MAXDEVS]={1,1,20,38,38};
 	uint16_t count;
 
 	for(int a=0;a<MAXDEVS;a++)
@@ -115,8 +115,8 @@ static void displayKwH()
 		//if(theMeters[a].curLife>oldCurLife[a])
 		//{
 			pcnt_get_counter_value((pcnt_unit_t)a,(short int *) &count);
-			sprintf(textt,"%5d+%d",theMeters[a].curLife,count);
-			drawString(posx[a], posy[a],string(textt), 16, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+			sprintf(textt,"%5d-%d",theMeters[a].curLife,count);
+			drawString(posx[a], posy[a],string(textt), 12, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
 		//	oldCurLife[a]=theMeters[a].curLife;
 		//}
 	}

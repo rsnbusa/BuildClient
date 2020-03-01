@@ -1,5 +1,5 @@
 intr_alloc.o: /Users/rsn/esp/esp-idf/components/esp32/intr_alloc.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/features.h \
@@ -71,7 +71,7 @@ intr_alloc.o: /Users/rsn/esp/esp-idf/components/esp32/intr_alloc.c \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_assert.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_ipc.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h:
 

@@ -18,7 +18,7 @@ uart.o: /Users/rsn/esp/esp-idf/components/driver/uart.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp32/include/esp_intr_alloc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
@@ -132,7 +132,7 @@ uart.o: /Users/rsn/esp/esp-idf/components/driver/uart.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp32/include/esp_intr_alloc.h:
 

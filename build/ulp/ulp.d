@@ -22,7 +22,7 @@ ulp.o: /Users/rsn/esp/esp-idf/components/ulp/ulp.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -96,7 +96,7 @@ ulp.o: /Users/rsn/esp/esp-idf/components/ulp/ulp.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 

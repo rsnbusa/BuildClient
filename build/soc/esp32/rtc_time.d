@@ -18,7 +18,7 @@ esp32/rtc_time.o: /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_time.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_assert.h \
@@ -78,7 +78,7 @@ esp32/rtc_time.o: /Users/rsn/esp/esp-idf/components/soc/esp32/rtc_time.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/rtc.h:
 

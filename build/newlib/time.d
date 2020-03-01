@@ -32,7 +32,7 @@ time.o: /Users/rsn/esp/esp-idf/components/newlib/time.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/time.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/times.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp32/include/esp_intr_alloc.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
@@ -157,7 +157,7 @@ time.o: /Users/rsn/esp/esp-idf/components/newlib/time.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp32/include/esp_intr_alloc.h:
 

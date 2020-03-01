@@ -1,7 +1,7 @@
 bootloader_start.o: \
  /Users/rsn/esp/esp-idf/components/bootloader/subproject/main/bootloader_start.c \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include_bootloader/bootloader_config.h \
@@ -27,7 +27,7 @@ bootloader_start.o: \
 
 /Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

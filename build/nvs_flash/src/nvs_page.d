@@ -7,7 +7,7 @@ src/nvs_page.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/features.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
@@ -52,7 +52,7 @@ src/nvs_page.o: \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h:
 

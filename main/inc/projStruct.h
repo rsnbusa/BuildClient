@@ -23,13 +23,13 @@ typedef struct meterType{
 } meterType;
 
 typedef struct config {
-    bool 	corteSent[MAXDEVS];
-    char 	medidor_id[MAXDEVS][MAXCHARS],meterName[MAXCHARS];
-    time_t 	lastUpload,lastTime,preLastTime,bornDate[MAXDEVS],lastBootDate;
-    u16 	beatsPerKw[MAXDEVS],bootcount,bounce[MAXDEVS],diaDeCorte[MAXDEVS],lastResetCode;
-    u16 	ssl,traceflag; // to make it mod 16 for AES encryption
-    u32 	bornKwh[MAXDEVS],centinel;
-    u8 		configured[MAXDEVS],active;
+    char 		medidor_id[MAXDEVS][MAXCHARS],meterName[MAXCHARS];
+    char		mgrName[MAXCHARS],mgrPass[MAXCHARS];
+    time_t 		bornDate[MAXDEVS],lastBootDate;
+    uint16_t 	beatsPerKw[MAXDEVS],bootcount,lastResetCode,free,traceflag; // to make it mod 16 for AES encryption
+    uint32_t 	bornKwh[MAXDEVS],centinel;
+    uint8_t		configured[MAXDEVS],active,logLevel,tariff[MAXDEVS];
+    uint32_t	sendDelay;
 } config_flash;
 
 typedef struct framq{

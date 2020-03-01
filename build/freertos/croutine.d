@@ -14,7 +14,7 @@ croutine.o: /Users/rsn/esp/esp-idf/components/freertos/croutine.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -92,7 +92,7 @@ croutine.o: /Users/rsn/esp/esp-idf/components/freertos/croutine.c \
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 

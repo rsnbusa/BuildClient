@@ -2,7 +2,7 @@ src/utils/uuid.o: \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/utils/uuid.c \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/src/utils/includes.h \
  /Users/rsn/esp/esp-idf/components/wpa_supplicant/port/include/supplicant_opt.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -50,7 +50,7 @@ src/utils/uuid.o: \
 
 /Users/rsn/esp/esp-idf/components/wpa_supplicant/port/include/supplicant_opt.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

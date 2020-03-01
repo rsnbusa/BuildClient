@@ -16,7 +16,7 @@ cxx_guards.o: /Users/rsn/esp/esp-idf/components/cxx/cxx_guards.cpp \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
@@ -94,7 +94,7 @@ cxx_guards.o: /Users/rsn/esp/esp-idf/components/cxx/cxx_guards.cpp \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

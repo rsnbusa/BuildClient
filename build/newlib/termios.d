@@ -1,5 +1,5 @@
 termios.o: /Users/rsn/esp/esp-idf/components/newlib/termios.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/termios.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -19,7 +19,7 @@ termios.o: /Users/rsn/esp/esp-idf/components/newlib/termios.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/errno.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/reent.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/sys/termios.h:
 

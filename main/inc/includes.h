@@ -35,10 +35,13 @@ extern "C"{
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
+#include "mbedtls/base64.h"
+#include "mbedtls/md.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "rom/rtc.h"
 #include "tcpip_adapter.h"
+#include "math.h"
 
 void app_main();
 }

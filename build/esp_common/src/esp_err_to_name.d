@@ -24,7 +24,7 @@ src/esp_err_to_name.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/alloca.h \
@@ -201,6 +201,7 @@ src/esp_err_to_name.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ssl.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ctr_drbg.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/aes.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/aes_alt.h \
@@ -259,7 +260,7 @@ src/esp_err_to_name.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h:
 
@@ -612,6 +613,8 @@ src/esp_err_to_name.o: \
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ctr_drbg.h:
 

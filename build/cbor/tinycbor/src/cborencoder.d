@@ -2,7 +2,7 @@ tinycbor/src/cborencoder.o: \
  /Users/rsn/esp/esp-idf/components/cbor/tinycbor/src/cborencoder.c \
  /Users/rsn/esp/esp-idf/components/cbor/tinycbor/src/cbor.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/ieeefp.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
@@ -39,7 +39,7 @@ tinycbor/src/cborencoder.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h:
 

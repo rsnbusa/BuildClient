@@ -27,7 +27,7 @@ spi_flash_chip_issi.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_flash_types.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
@@ -89,7 +89,7 @@ spi_flash_chip_issi.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

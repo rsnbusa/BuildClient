@@ -24,7 +24,7 @@ esp-mqtt/mqtt_client.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/xtensa/hal.h \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core.h \
@@ -180,6 +180,7 @@ esp-mqtt/mqtt_client.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ssl.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ctr_drbg.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/aes.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/aes_alt.h \
@@ -242,7 +243,7 @@ esp-mqtt/mqtt_client.o: \
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h:
 
@@ -553,6 +554,8 @@ esp-mqtt/mqtt_client.o: \
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ctr_drbg.h:
 

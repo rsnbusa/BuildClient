@@ -17,7 +17,7 @@ src/httpd_uri.o: \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/_ansi.h \
@@ -161,7 +161,7 @@ src/httpd_uri.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

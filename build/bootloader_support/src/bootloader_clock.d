@@ -1,6 +1,6 @@
 src/bootloader_clock.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/src/bootloader_clock.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -60,7 +60,7 @@ src/bootloader_clock.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/uart_channel.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/rtc.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h:
 

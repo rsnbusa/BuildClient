@@ -26,7 +26,7 @@ transport_ws.o: \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/tcp_transport/include/esp_transport.h \
@@ -48,7 +48,8 @@ transport_ws.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/esp_mem.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
- /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h
+ /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h
 
 /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h:
 
@@ -102,7 +103,7 @@ transport_ws.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 
@@ -147,4 +148,6 @@ transport_ws.o: \
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha1.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha1_alt.h:
 /Users/rsn/esp/esp-idf/components/tcp_transport/./transport_ws.c:

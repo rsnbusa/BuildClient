@@ -30,7 +30,7 @@ xtensa/gdbstub_xtensa.o: \
  /Users/rsn/esp/esp-idf/components/xtensa/esp32/include/xtensa/config/core-matmap.h \
  /Users/rsn/esp/esp-idf/components/esp_gdbstub/esp32/gdbstub_target_config.h \
  /Users/rsn/esp/esp-idf/components/esp_gdbstub/private_include/esp_gdbstub_common.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/cpu.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/soc_memory_layout.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdlib.h \
@@ -103,7 +103,7 @@ xtensa/gdbstub_xtensa.o: \
 
 /Users/rsn/esp/esp-idf/components/esp_gdbstub/private_include/esp_gdbstub_common.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/cpu.h:
 

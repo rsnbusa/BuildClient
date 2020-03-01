@@ -23,7 +23,7 @@ reent_init.o: /Users/rsn/esp/esp-idf/components/newlib/reent_init.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/sched.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h
 
 /Users/rsn/esp/esp-idf/components/newlib/include/string.h:
 
@@ -73,5 +73,5 @@ reent_init.o: /Users/rsn/esp/esp-idf/components/newlib/reent_init.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 /Users/rsn/esp/esp-idf/components/newlib/./reent_init.c:

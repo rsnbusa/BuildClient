@@ -14,7 +14,7 @@ spi_common.o: /Users/rsn/esp/esp-idf/components/driver/spi_common.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/lock.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -127,7 +127,7 @@ spi_common.o: /Users/rsn/esp/esp-idf/components/driver/spi_common.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/driver/include/driver/spi_master.h:
 

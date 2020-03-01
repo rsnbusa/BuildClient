@@ -11,7 +11,7 @@ library/ssl_cert.o: \
  /Users/rsn/esp/esp-idf/components/openssl/include/internal/ssl_stack.h \
  /Users/rsn/esp/esp-idf/components/openssl/include/internal/ssl_dbg.h \
  /Users/rsn/esp/esp-idf/components/openssl/include/platform/ssl_opt.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/openssl/include/platform/ssl_port.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/cdefs.h \
@@ -63,7 +63,7 @@ library/ssl_cert.o: \
 
 /Users/rsn/esp/esp-idf/components/openssl/include/platform/ssl_opt.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/openssl/include/platform/ssl_port.h:
 

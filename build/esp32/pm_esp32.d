@@ -22,7 +22,7 @@ pm_esp32.o: /Users/rsn/esp/esp-idf/components/esp32/pm_esp32.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/endian.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/param.h \
  /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
@@ -150,7 +150,7 @@ pm_esp32.o: /Users/rsn/esp/esp-idf/components/esp32/pm_esp32.c \
 
 /Users/rsn/esp/esp-idf/components/xtensa/include/esp_attr.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h:
 

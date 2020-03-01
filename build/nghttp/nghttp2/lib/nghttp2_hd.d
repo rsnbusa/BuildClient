@@ -36,7 +36,7 @@ nghttp2/lib/nghttp2_hd.o: \
  /Users/rsn/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_mem.h \
  /Users/rsn/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_rcbuf.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_helper.h \
  /Users/rsn/esp/esp-idf/components/nghttp/nghttp2/lib/nghttp2_debug.h
@@ -113,7 +113,7 @@ nghttp2/lib/nghttp2_hd.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

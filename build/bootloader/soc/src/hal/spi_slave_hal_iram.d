@@ -2,7 +2,7 @@ src/hal/spi_slave_hal_iram.o: \
  /Users/rsn/esp/esp-idf/components/soc/src/hal/spi_slave_hal_iram.c \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/spi_slave_hal.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/spi_struct.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
@@ -25,7 +25,7 @@ src/hal/spi_slave_hal_iram.o: \
 
 /Users/rsn/esp/esp-idf/components/soc/include/soc/lldesc.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/lldesc.h:
 

@@ -21,7 +21,7 @@ esp32/soc_memory_layout.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_assert.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/soc_memory_layout.h \
@@ -71,7 +71,7 @@ esp32/soc_memory_layout.o: \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

@@ -18,7 +18,7 @@ vfs.o: /Users/rsn/esp/esp-idf/components/vfs/vfs.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/errno.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/fcntl.h \
@@ -126,7 +126,7 @@ vfs.o: /Users/rsn/esp/esp-idf/components/vfs/vfs.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

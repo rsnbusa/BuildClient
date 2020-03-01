@@ -1,6 +1,6 @@
 esp_flash_spi_init.o: \
  /Users/rsn/esp/esp-idf/components/spi_flash/esp_flash_spi_init.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_flash.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -85,7 +85,7 @@ esp_flash_spi_init.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/queue.h \
  /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_flash_internal.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/spi_flash/include/esp_flash.h:
 

@@ -18,7 +18,7 @@ src/ipc.o: /Users/rsn/esp/esp-idf/components/esp_common/src/ipc.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/string.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
@@ -104,7 +104,7 @@ src/ipc.o: /Users/rsn/esp/esp-idf/components/esp_common/src/ipc.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 

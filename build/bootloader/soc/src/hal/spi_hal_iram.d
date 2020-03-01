@@ -4,7 +4,7 @@ src/hal/spi_hal_iram.o: \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/hal/spi_ll.h \
  /Users/rsn/esp/esp-idf/components/soc/include/hal/hal_defs.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h \
  /Users/rsn/esp/esp-idf/components/log/include/esp_log_internal.h \
  /Users/rsn/esp/esp-idf/components/soc/include/soc/spi_periph.h \
@@ -30,7 +30,7 @@ src/hal/spi_hal_iram.o: \
 
 /Users/rsn/esp/esp-idf/components/log/include/esp_log.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/esp_rom/include/esp32/rom/ets_sys.h:
 

@@ -1,6 +1,6 @@
 src/idf/secure_boot_signatures.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/src/idf/secure_boot_signatures.c \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include_bootloader/bootloader_flash.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/machine/_default_types.h \
@@ -50,6 +50,7 @@ src/idf/secure_boot_signatures.o: \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/esp_mem.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha256_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/x509.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/asn1.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/bignum.h \
@@ -59,7 +60,7 @@ src/idf/secure_boot_signatures.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ecp.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/ecdsa.h
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/bootloader_support/include_bootloader/bootloader_flash.h:
 
@@ -158,6 +159,8 @@ src/idf/secure_boot_signatures.o: \
 /Users/rsn/esp/esp-idf/components/mbedtls/port/include/esp_mem.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha256_alt.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/x509.h:
 

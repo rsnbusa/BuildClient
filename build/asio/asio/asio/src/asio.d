@@ -3,7 +3,7 @@ asio/asio/src/asio.o: \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/impl/src.hpp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/detail/config.hpp \
  /Users/rsn/esp/esp-idf/components/asio/port/include/esp_asio_config.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/impl/error.ipp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/error.hpp \
  /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/error_code.hpp \
@@ -321,7 +321,7 @@ asio/asio/src/asio.o: \
 
 /Users/rsn/esp/esp-idf/components/asio/port/include/esp_asio_config.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/asio/asio/asio/include/asio/impl/error.ipp:
 

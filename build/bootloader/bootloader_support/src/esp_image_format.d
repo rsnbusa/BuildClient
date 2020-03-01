@@ -12,7 +12,7 @@ src/esp_image_format.o: \
  /Users/rsn/esp/esp-idf/components/bootloader_support/include/esp_flash_partitions.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_err.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_assert.h \
  /Users/rsn/esp/esp-idf/components/esp_common/include/esp_bit_defs.h \
@@ -60,7 +60,7 @@ src/esp_image_format.o: \
 
 /Users/rsn/esp/esp-idf/components/esp_common/include/esp_types.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/bootloader/../include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/bootloader/../include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/soc/esp32/include/soc/soc.h:
 

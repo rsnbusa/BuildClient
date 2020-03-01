@@ -1,7 +1,7 @@
 mbedtls/library/entropy.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/library/entropy.c \
  /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/check_config.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/limits.h \
@@ -27,6 +27,7 @@ mbedtls/library/entropy.o: \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/sha512.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h \
+ /Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy_poll.h \
  /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/platform_util.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/string.h \
@@ -44,7 +45,7 @@ mbedtls/library/entropy.o: \
 
 /Users/rsn/esp/esp-idf/components/mbedtls/port/include/mbedtls/esp_config.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/config.h:
 
@@ -95,6 +96,8 @@ mbedtls/library/entropy.o: \
 /Users/rsn/esp/esp-idf/components/newlib/include/stdint.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/sys/_intsup.h:
+
+/Users/rsn/esp/esp-idf/components/mbedtls/port/include/sha512_alt.h:
 
 /Users/rsn/esp/esp-idf/components/mbedtls/mbedtls/include/mbedtls/entropy_poll.h:
 

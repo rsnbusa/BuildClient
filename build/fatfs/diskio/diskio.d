@@ -33,7 +33,7 @@ diskio/diskio.o: /Users/rsn/esp/esp-idf/components/fatfs/diskio/diskio.c \
  /Users/rsn/esp/esp-idf/components/newlib/include/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/stdio.h \
  /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h \
- /Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h \
+ /Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/assert.h \
  /Users/rsn/esp/esp-idf/components/fatfs/src/ffconf.h \
  /Users/rsn/esp/esp-idf/components/newlib/include/sys/param.h \
@@ -144,7 +144,7 @@ diskio/diskio.o: /Users/rsn/esp/esp-idf/components/fatfs/diskio/diskio.c \
 
 /Users/rsn/esp/esp-idf/components/newlib/platform_include/assert.h:
 
-/Users/rsn/Desktop/MeterBuilding/buildClientFram/build/include/sdkconfig.h:
+/Users/rsn/Desktop/MeterBuilding/buildClient/build/include/sdkconfig.h:
 
 /Users/rsn/esp/esp-idf/components/newlib/include/assert.h:
 
