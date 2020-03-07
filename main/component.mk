@@ -1,3 +1,6 @@
 CXXFLAGS += -fpermissive 
 COMPONENT_SRCDIRS = .  HW src FramSPI
 COMPONENT_ADD_INCLUDEDIRS = . HW inc FramSPI
+
+COMPONENT_EMBED_TXTFILES := certs/public.pem
+COMPONENT_EMBED_TXTFILES += certs/prvtkey.pem

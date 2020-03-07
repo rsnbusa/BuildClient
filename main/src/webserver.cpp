@@ -18,7 +18,7 @@ static esp_err_t setupend_get_handler(httpd_req_t *req);
 
 extern void delay(uint32_t a);
 extern void write_to_flash();
-extern int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx);
+extern int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *donde,uint8_t maxx);
 extern void shaMake(char * payload,uint8_t payloadLen,uint8_t* shaResult);
 extern uint32_t millis();
 
@@ -28,6 +28,7 @@ static int reserveSlot(char *server, char* password)
 {
 	wifi_config_t wifi_config;
 	int8_t	ans=0;
+	int q=0;
 
 	char *lmessage=(char*)malloc(100);
 	memset(lmessage,0,100);
@@ -42,11 +43,16 @@ static int reserveSlot(char *server, char* password)
 
 	if(strlen(server)>0)
 	{
+		esp_wifi_stop();
+		delay(1000);
 		strcpy((char*)wifi_config.sta.ssid,server);
 		strcpy((char*)wifi_config.sta.password,password);
+		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 		esp_wifi_start();
-		int q=sendMsg((uint8_t*)lmessage,(uint8_t*)ansmem,100);
+		EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, LOGIN_BIT, false, true, 100000/  portTICK_RATE_MS); //wait for IP to be assigned
+		if ((uxBits & LOGIN_BIT)==LOGIN_BIT)
+		q=sendMsg((uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ansmem,100);
 	//	printf("Reserve ans %d\n",q);
 		if(q<0)
 		{

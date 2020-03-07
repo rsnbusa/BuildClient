@@ -28,8 +28,10 @@ EXTERN SemaphoreHandle_t 				wifiSem,framSem,I2CSem,printSem;
 EXTERN TaskHandle_t						webHandle,timeHandle,simHandle;
 EXTERN u16                  			theGuard,diaHoraTarifa,yearDay,oldYearDay,llevoMsg,waitQueue,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
 EXTERN u32								sentTotal,sendTcp,totalMsg[MAXDEVS],theMacNum,totalPulses,oldCurBeat[MAXDEVS],oldCurLife[MAXDEVS],startGuard;
-EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12],lastalign,lastFont,workingDevs,nofram,sendErrors;
-
+EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12],lastalign,lastFont,workingDevs,nofram,sendErrors,iv[16],key[32];
+EXTERN esp_aes_context					ctx ;
+EXTERN mbedtls_pk_context 				pk;
+EXTERN mbedtls_ctr_drbg_context			ctr_drbg;
 #ifdef DISPLAY
 EXTERN I2C								miI2C;
 EXTERN i2ctype 							i2cp;

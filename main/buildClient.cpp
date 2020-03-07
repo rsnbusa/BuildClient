@@ -2,7 +2,6 @@
 #include "defines.h"
 #include "projStruct.h"
 #include "globals.h"
-
 using namespace std;
 
 void kbd(void *arg);
@@ -172,7 +171,7 @@ void timeKeeper(void *pArg)
 	while(true)
 	{
 		delay(theConf.sendDelay);		//configuration delay
-
+	//	delay(4000);
 		time(&now);
 		localtime_r(&now,&timep);
 		mesg=timep.tm_mon;   			// Global Month
@@ -485,12 +484,16 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
 {
     switch (event_id) {
     	case WIFI_EVENT_STA_START:
+    	//	printf("start sta wifi\n");
     		xTaskCreate(&connect_to_host,"conn",4096,NULL, 4, NULL);
         break;
         case WIFI_EVENT_STA_CONNECTED:
+    //		printf("start wifi conn\n");
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             break; //wait for ip
         case WIFI_EVENT_STA_DISCONNECTED:
+    		printf("start wifi disco\n");
+
             gpio_set_level((gpio_num_t)WIFILED, 0);
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             if(gsock>0)
@@ -502,7 +505,7 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
             xTaskCreate(&connect_to_host,"conn",4096,NULL, 4, NULL);
             break;
         default:
-		//	if(theConf.traceflag & (1<<WIFID))
+			if(theConf.traceflag & (1<<WIFID))
 				pprintf("%sDefault Id %d\n",WIFIDT,event_id);
             break;
     }
@@ -837,7 +840,7 @@ static cJSON * makeGroupCmdAll()
 	return root;
 }
 
-int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
+int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *donde,uint8_t maxx)
 {
 	ip_addr_t 						remote;
 	u8 								aca[4];
@@ -848,9 +851,10 @@ int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 
 
 	if(theConf.traceflag & (1<<MSGD))
-		pprintf("%sSending queue %s\n",MSGDT,lmessage);
+		pprintf("%sSending queue size %d\n",MSGDT,son);
 
-	 err = send(gsock, (char*)lmessage, strlen((char*)lmessage), 0);
+	// err = send(gsock, (char*)lmessage, strlen((char*)lmessage), 0);
+	 err = send(gsock, (char*)lmessage, son, 0);
 	 if (err < 0)
 	 {
 		if(theConf.traceflag & (1<<MSGD))
@@ -887,6 +891,62 @@ int sendMsg(uint8_t *lmessage, uint8_t *donde,uint8_t maxx)
 static void logIn()
 {
     loginT loginData;
+    size_t ret;
+	size_t olen = 0;
+	char * buf=malloc(1024);
+	char * b64=malloc(1000);
+
+	memset( iv, 0, sizeof( iv ) );
+	memset( key, 65, sizeof( key ) );
+
+	esp_aes_init( &ctx );
+	esp_aes_setkey( &ctx, key, 256 );		//send first Login with known secret AES
+
+
+	mbedtls_entropy_context entropy;
+	extern const unsigned char cacert_pem_start[] asm("_binary_public_pem_start");
+	extern const unsigned char cacert_pem_end[]   asm("_binary_public_pem_end");
+	int len = cacert_pem_end - cacert_pem_start;
+
+	mbedtls_ctr_drbg_init(&ctr_drbg);
+	mbedtls_entropy_init(&entropy);
+	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
+	{
+	printf("failed seed %x\n",ret);
+	return false;
+	}
+
+	char *nkey=malloc(32);
+	for (int a=0;a<32;a++)
+		nkey[a]=esp_random() %256;
+	memset(nkey,66,32);//test should change to BBBBBBBB
+
+	mbedtls_pk_init( &pk );
+
+	if( ( ret = mbedtls_pk_parse_public_key( &pk,cacert_pem_start,len) ) != 0 )
+	printf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
+	else
+	{
+	//	printf("Public Ok\n");
+
+	/*
+	 * Calculate the RSA encryption of the data.
+	 */
+	if( ( ret = mbedtls_pk_encrypt( &pk, nkey, sizeof(key),
+									buf, &olen, 1024,
+									mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+	{
+		printf( " failed\n  ! mbedtls_pk_encrypt returned -0x%04x\n", -ret );
+	}
+	//		else
+	//			printf("Encrypted len %d\n",olen);
+	}
+	size_t blen;
+	ret=mbedtls_base64_encode(b64,1000,&blen,buf,olen);
+	//	if(ret==0)
+	//		printf("Base64[%d] %s\n",blen,b64);
+
+
 
 	setenv("TZ", LOCALTIME, 1);
 	tzset();
@@ -903,19 +963,54 @@ static void logIn()
 
 	cJSON_AddStringToObject(cmdJ,"password","zipo");
 	cJSON_AddStringToObject(cmdJ,"cmd","/ga_login");
+	cJSON_AddStringToObject(cmdJ,"key",b64);
 
 	cJSON_AddItemToArray(ar, cmdJ);
 	cJSON_AddItemToObject(root, "Batch",ar);
 	double dmac=(double)theMacNum;
 	cJSON_AddNumberToObject(root,"macn",dmac);
 	char *logMsg=cJSON_Print(root);
+	int theSize=strlen(logMsg);
+
+	int rem= theSize % 16;
+	theSize+=16-rem;			//round to next 16 for AES
+
+	char * donde=(char*)malloc(theSize);
+	if (!donde)
+		{
+		printf("No memory copy message\n");
+		return;
+		}
+	bzero(donde,theSize);
+
+	memcpy(donde,logMsg,strlen(logMsg));
+
+	char * output=(char*)malloc(theSize);
+	if (!output)
+		{
+		printf("No memory ouput message\n");
+		return;
+		}
+	bzero(output,theSize);
+
+	bzero(iv,sizeof(iv));
+	bzero(output,theSize);
+//	printf("Login bkey %s\n",key);
+	esp_aes_crypt_cbc( &ctx, ESP_AES_ENCRYPT, theSize, iv, donde, output );
+
 
 	memset((void*)&loginData,0,sizeof(loginData));
 	char *tmp=(char*)malloc(100);
-	int fueron=sendMsg((uint8_t*)logMsg,(uint8_t*)tmp, 100);
+//	int fueron=sendMsg((uint8_t*)logMsg,strlen(logMsg),(uint8_t*)tmp, 100);
+	int fueron=sendMsg((uint8_t*)output,theSize,(uint8_t*)tmp, 100);
 	if(fueron>0)
 		memcpy((void*)&loginData,tmp,sizeof(loginData));
 	free(tmp);
+
+	memcpy(key,nkey,32);
+	esp_aes_setkey( &ctx, key, 256 );	//now definite
+////	printf("After Key %s\n",key);
+	free(nkey);
 
 	updateDateTime(loginData);
 	oldMesg=mesg;
@@ -928,6 +1023,24 @@ static void logIn()
 
 	free(logMsg);
 	cJSON_Delete(root);
+	if(donde)
+	{
+		free(donde);
+		donde=NULL;
+	}
+	if(output)
+	{
+		free(output);
+		output=NULL;
+	}
+}
+
+void dump(char * title,char *desde, int son)
+{
+	printf("%s  %p\n",title,desde);
+	for (int a=0;a<son;a++)
+		printf("%02x",desde[a]);
+	printf("\n");
 }
 
 void sendStatusMeterAll()
@@ -944,12 +1057,49 @@ void sendStatusMeterAll()
 	cJSON *root=makeGroupCmdAll();
 	if(root)
 		lmessage=cJSON_Print(root);
-	memset((void*)&loginData,0,sizeof(loginData));
+
+	if(!lmessage)
+	{
+		printf("No message\n");
+		return -1;
+	}
+
+	bzero(&loginData,sizeof(loginData));
+	bzero(iv,sizeof(iv));
+
+	int theSize=strlen(lmessage);
+	int rem= theSize % 16;
+	theSize+=16-rem;			//round to next 16 for AES
+
+	char * donde=(char*)malloc(theSize);
+	if (!donde)
+		{
+		printf("No memory copy message\n");
+		return;
+		}
+	bzero(donde,theSize);
+
+	memcpy(donde,lmessage,strlen(lmessage));
+	char * output=(char*)malloc(theSize);
+	if (!output)
+		{
+		printf("No memory ouput message\n");
+		return;
+		}
+	bzero(output,theSize);
+
+	esp_aes_crypt_cbc( &ctx, ESP_AES_ENCRYPT, theSize, iv, donde, output );
 
 	//receive buffer greater than expected since we are sending 5 status messages and will receive 5 answers.
 	// if we do not do this the sendmsg socket will SAVE the other answers for next call and never gets the logindate correct
 	void *ans=malloc(100);
-	sendStatus=sendMsg((uint8_t*)lmessage,(uint8_t*)ans,100);
+	if(!ans)
+	{
+		printf("No ram for Ans\n");
+		return;
+	}
+//	sendStatus=sendMsg((uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ans,100);
+	sendStatus=sendMsg((uint8_t*)output,theSize,(uint8_t*)ans,100);
 	if(sendStatus>=0)
 	{
 		sendErrors=0;		//restart counter on sucess
@@ -970,10 +1120,28 @@ void sendStatusMeterAll()
 			}
 		}
 	}
-	if(ans)
-		free(ans);
+//	printf("After aes %d\n",esp_get_free_heap_size());
+
 	if(lmessage)
+	{
 		free(lmessage);
+		lmessage=NULL;
+	}
+	if(ans)
+	{
+		free(ans);
+		ans=NULL;
+	}
+	if(donde)
+	{
+		free(donde);
+		donde=NULL;
+	}
+	if(output)
+	{
+		free(output);
+		output=NULL;
+	}
 	if(root)
 		cJSON_Delete(root);
 
@@ -1045,8 +1213,66 @@ static void initScreen()
 }
 #endif
 
+bool decryptLogin(char* b64, uint16_t blen, char *decryp, size_t * fueron)
+{
+	mbedtls_entropy_context entropy;
+	int ret;
+	size_t ilen=0;
+
+	char *encryp=malloc(1024);
+	ret=mbedtls_base64_decode(encryp,1024,&ilen,b64,blen);
+	if(ret!=0)
+	{
+		printf("Failed b64 %d\n",ret);
+		return false;
+	}
+
+	extern const unsigned char prvtkey_pem_start[] asm("_binary_prvtkey_pem_start");
+	extern const unsigned char prvtkey_pem_end[] asm("_binary_prvtkey_pem_end");
+	int len = prvtkey_pem_end - prvtkey_pem_start;
+
+	mbedtls_ctr_drbg_init(&ctr_drbg);
+	mbedtls_entropy_init(&entropy);
+	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
+	{
+		printf("failed seed %x\n",ret);
+		return false;
+	}
+
+	mbedtls_pk_init( &pk );
+
+	if( ( ret = mbedtls_pk_parse_key( &pk, prvtkey_pem_start,len,NULL,0)) != 0 )
+	{
+		    printf( " failed\n  ! mbedtls_pk_parse_private_keyfile returned -0x%04x\n", -ret );
+		    return false;
+	}
+	else
+	{
+	//	printf("Private Ok\n");
+		size_t aca;
+		if( ( ret = mbedtls_pk_decrypt( &pk, encryp, ilen,decryp, &aca,1024, mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+		{
+		    printf( " failed  mbedtls_pk_decrypt returned -0x%04x\n", -ret );
+		    return false;
+
+		}
+		else
+		{
+		//	printf("Decrypted[%d] >%s<\n",aca,decryp);
+			*fueron=aca;
+		}
+		return true;
+	}
+}
 static void init_vars()
 {
+	char * buf=malloc(1024);
+	char *result=malloc(1024);
+//	char to_encrypt[]="0123456789ABCDEFABCDEFGHIJKLMNOP";
+
+
+	size_t olen = 0;
+
 	qwait=QDELAY;
 	qdelay=qwait*1000;
 	sendTcp=waitQueue=500;
@@ -1127,6 +1353,62 @@ static void init_vars()
 		debugs="-"+string(lookuptable[a]);
 		strcpy(lookuptable[a+NKEYS/2],debugs.c_str());
 	}
+
+	memset( iv, 0, sizeof( iv ) );
+	memset( key, 65, sizeof( key ) );
+
+	esp_aes_init( &ctx );
+	esp_aes_setkey( &ctx, key, 256 );
+
+
+	mbedtls_entropy_context entropy;
+	int ret;
+	extern const unsigned char cacert_pem_start[] asm("_binary_public_pem_start");
+	extern const unsigned char cacert_pem_end[]   asm("_binary_public_pem_end");
+	int len = cacert_pem_end - cacert_pem_start;
+
+	mbedtls_ctr_drbg_init(&ctr_drbg);
+	mbedtls_entropy_init(&entropy);
+	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
+	{
+		printf("failed seed %x\n",ret);
+		return false;
+	}
+
+	mbedtls_pk_init( &pk );
+
+	if( ( ret = mbedtls_pk_parse_public_key( &pk,cacert_pem_start,len) ) != 0 )
+	    printf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
+	else
+	{
+		printf("Public Ok\n");
+
+		/*
+		 * Calculate the RSA encryption of the data.
+		 */
+//		if( ( ret = mbedtls_pk_encrypt( &pk, to_encrypt, sizeof(to_encrypt),
+//		                                buf, &olen, 1024,
+//		                                mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+//		{
+//		    printf( " failed\n  ! mbedtls_pk_encrypt returned -0x%04x\n", -ret );
+//		}
+//		else
+//			printf("Encrypted len %d\n",olen);
+	}
+//	size_t fueron;
+//	size_t blen;
+//	char *b64=malloc(1000);
+//	ret=mbedtls_base64_encode(b64,1000,&blen,buf,olen);
+////	if(ret==0)
+////		printf("Base64[%d] %s\n",blen,b64);
+//
+////	if(decryptLogin(buf,olen,result,&fueron))
+//		if(decryptLogin(b64,blen,result,&fueron))
+//		printf("Decrypted[%d] [%s]\n",fueron,result);
+//	else
+//		printf("Failed to decrypt\n");
+	free(buf);
+	free(result);
 }
 
 static void check_boot_options()
