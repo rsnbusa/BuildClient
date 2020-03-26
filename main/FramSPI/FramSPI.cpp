@@ -148,7 +148,6 @@ int  FramSPI::sendCmd (uint8_t cmd)
 uint8_t  FramSPI::readStatus ()
 {
 	spi_transaction_ext_t t;
-	esp_err_t ret;
 
 	memset(&t, 0, sizeof(t));       //Zero out the transaction no need to set to 0 or null unused params
 
@@ -157,7 +156,7 @@ uint8_t  FramSPI::readStatus ()
 	t.base.rxlength=	8;
 	t.command_bits = 	8;
 	t.address_bits =	0;
-	ret=spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit!
+	spi_device_polling_transmit(spi, (spi_transaction_t*)&t);  //Transmit!
 	return t.base.rx_data[0];
 }
 
@@ -373,7 +372,8 @@ int son=0;
 		buffer=lbuffer;			//for free
 	}
 //	printf("Verify Ok\n");
-	free(buffer);
+	if(buffer)
+		free(buffer);
 	return ESP_OK;
 }
 
@@ -403,8 +403,10 @@ int FramSPI::formatMeter(uint8_t cual)
 	void *buf=malloc(count);
 	if(!buf)
 		return -1;
-	memset(buf,0,count);
+	bzero(buf,count);
 	ret=writeMany(add,(uint8_t*)buf,count);
+	if(buf)
+		free(buf);
 	return ret;
 
 }

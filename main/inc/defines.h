@@ -9,8 +9,11 @@
 #define u16								uint16_t
 #define u8								uint8_t
 
+#define MAXCMDS							11
 #define NKEYS							30
-
+#define	AESL							32
+#define BSIZE							1000
+#define MAXLOSTSYNC						3
 #define QDELAY							2
 #define WIFILED							2
 #define MAXSENDERR						10

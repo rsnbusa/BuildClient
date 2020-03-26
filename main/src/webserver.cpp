@@ -18,11 +18,32 @@ static esp_err_t setupend_get_handler(httpd_req_t *req);
 
 extern void delay(uint32_t a);
 extern void write_to_flash();
-extern int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *donde,uint8_t maxx);
+extern int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *donde,uint16_t maxx);
 extern void shaMake(char * payload,uint8_t payloadLen,uint8_t* shaResult);
 extern uint32_t millis();
 
 httpd_handle_t hserver = NULL;
+
+static const httpd_uri_t setupend = {
+    .uri       = "/setupend",
+    .method    = HTTP_GET,
+    .handler   = setupend_get_handler,
+	.user_ctx	= NULL
+};
+
+static const httpd_uri_t challenge = {
+    .uri       = "/challenge",
+    .method    = HTTP_GET,
+    .handler   = challenge_get_handler,
+	.user_ctx	= NULL
+};
+static const httpd_uri_t setup = {
+    .uri       = "/setup",
+    .method    = HTTP_GET,
+    .handler   = setup_get_handler,
+	.user_ctx	= NULL
+};
+
 
 static int reserveSlot(char *server, char* password)
 {
@@ -81,13 +102,12 @@ static int scan(char * who)
 
 	    memset(ap_info, 0, sizeof(ap_info));
 
-	    wifi_scan_config_t scan_config = {
-	    		.ssid = 0,
-	    		.bssid = 0,
-	    		.channel = 0,
-	    	    .show_hidden = true,
-				.scan_type= WIFI_SCAN_TYPE_ACTIVE
-	    	};
+	    wifi_scan_config_t scan_config;
+		scan_config.ssid = 0;
+		scan_config.bssid = 0;
+		scan_config.channel = 0;
+		scan_config.show_hidden = true;
+		scan_config.scan_type= WIFI_SCAN_TYPE_ACTIVE;
 
 	   	ESP_ERROR_CHECK(esp_wifi_scan_start(&scan_config, true));
 	    ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&number, ap_info));
@@ -111,13 +131,6 @@ static int scan(char * who)
 	    }
 	    return -1;
 }
-
-static const httpd_uri_t setup = {
-    .uri       = "/setup",
-    .method    = HTTP_GET,
-    .handler   = setup_get_handler,
-	.user_ctx	= NULL
-};
 
 static esp_err_t setup_get_handler(httpd_req_t *req)
 {
@@ -183,13 +196,6 @@ static esp_err_t setup_get_handler(httpd_req_t *req)
 
     return ESP_OK;
 }
-
-static const httpd_uri_t challenge = {
-    .uri       = "/challenge",
-    .method    = HTTP_GET,
-    .handler   = challenge_get_handler,
-	.user_ctx	= NULL
-};
 
 esp_err_t challenge_get_handler(httpd_req_t *req)
 {
@@ -308,13 +314,6 @@ esp_err_t challenge_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static const httpd_uri_t setupend = {
-    .uri       = "/setupend",
-    .method    = HTTP_GET,
-    .handler   = setupend_get_handler,
-	.user_ctx	= NULL
-};
-
 static esp_err_t setupend_get_handler(httpd_req_t *req)
 {
     char*  	buf;
@@ -383,6 +382,25 @@ exit:
 
     return ESP_OK;
 }
+
+//void web_init()
+//{
+//	for (int a=0;a<MAXURLS;a++)
+//	{
+//		urls[a].user_ctx=NULL;
+//		urls[a].method=HTTP_GET;
+//		switch(a)
+//		{
+//			case 0:
+//					strcpy(urls[a].uri,(const char*)"/setupend");
+//					urls[a].handler=setupend_get_handler;
+//					break;
+//			default:
+//				break;
+//		}
+//
+//	}
+//}
 
 void start_webserver(void *pArg)
 {

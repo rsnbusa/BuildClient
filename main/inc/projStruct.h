@@ -30,6 +30,8 @@ typedef struct config {
     uint32_t 	bornKwh[MAXDEVS],centinel;
     uint8_t		configured[MAXDEVS],active,logLevel,tariff[MAXDEVS];
     uint32_t	sendDelay;
+    char		prevK[32],lkey[32];
+    uint8_t		lostSync,crypt;
 } config_flash;
 
 typedef struct framq{
@@ -64,4 +66,11 @@ typedef struct internalHost{
 	bool		valid;
 }host_t;
 
+typedef int (*functcmd)(cJSON *, uint8_t cualM);
+
+typedef struct cmdRecord{
+    char 		comando[20];
+    functcmd 	code;
+    uint32_t	count;
+}cmdRecord;
 #endif

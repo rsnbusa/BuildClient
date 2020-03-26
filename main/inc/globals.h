@@ -12,17 +12,17 @@
 #include "includes.h"
 using namespace std;
 
-EXTERN bool								conn,framFlag,framGuard;
-EXTERN char								lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6],TAG[20],challengeSHA[50],sharesult[32],rsnsha[10];
+EXTERN bool								conn,framFlag,framGuard,rsyncf;
+EXTERN char								lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6],TAG[20],challengeSHA[50],sharesult[32],rsnsha[10],syncKey[AESL],globalConn[20];
 EXTERN config_flash						theConf;
 EXTERN EventGroupHandle_t 				wifi_event_group;
 EXTERN FramSPI							fram;
 EXTERN gpio_config_t 					io_conf;
 EXTERN host_t							setupHost[MAXDEVS];
-EXTERN int								gsock,starthora,startday,startmonth,startyear,WIFI_BIT,LOGIN_BIT;
+EXTERN int								gsock,starthora,startday,startmonth,startyear,WIFI_BIT,LOGIN_BIT,displayMode;
 EXTERN mbedtls_md_context_t 			mbedtls_ctx;
 EXTERN meterType						theMeters[MAXDEVS];
-EXTERN nvs_handle 						nvshandle;
+EXTERN nvs_handle_t 					nvshandle;
 EXTERN QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;
 EXTERN SemaphoreHandle_t 				wifiSem,framSem,I2CSem,printSem;
 EXTERN TaskHandle_t						webHandle,timeHandle,simHandle;
@@ -35,6 +35,7 @@ EXTERN mbedtls_ctr_drbg_context			ctr_drbg;
 #ifdef DISPLAY
 EXTERN I2C								miI2C;
 EXTERN i2ctype 							i2cp;
+EXTERN cmdRecord						cmds[MAXCMDS];
 #ifdef GLOBAL
 EXTERN	SSD1306             			display;
 #else

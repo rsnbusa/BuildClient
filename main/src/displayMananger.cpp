@@ -127,7 +127,7 @@ void displayManager(void *arg) {
 	struct tm timeinfo ;
 	char textd[20],textt[20];
 
-	bool displayMode=true;// kwh
+	displayMode=0;// nothing
 
 	memset(oldCurBeat,0,sizeof(oldCurBeat));
 	memset(oldCurLife,0,sizeof(oldCurLife));
@@ -138,26 +138,31 @@ void displayManager(void *arg) {
 		vTaskDelay(1000/portTICK_PERIOD_MS);
 		if(!gpio_get_level((gpio_num_t)0))
 		{
-			displayMode=!displayMode;
+			displayMode++;
+			if(displayMode>2)
+				displayMode=0;
 			memset(oldCurBeat,0,sizeof(oldCurBeat));
 			memset(oldCurLife,0,sizeof(oldCurLife));
 			clearScreen();
 		}
-		time(&t);
-		localtime_r(&t, &timeinfo);
-
-
-		sprintf(textd,"%02d/%02d/%04d",timeinfo.tm_mday,timeinfo.tm_mon+1,1900+timeinfo.tm_year);
-		sprintf(textt,"%02d:%02d:%02d",timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
-		if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+		if(displayMode>0)
 		{
-			drawString(0, 51, string(textd), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-			drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
-			if(displayMode)
-				displayBeats();
-			else
-				displayKwH();
-			xSemaphoreGive(I2CSem);
+			time(&t);
+			localtime_r(&t, &timeinfo);
+
+
+			sprintf(textd,"%02d/%02d/%04d",timeinfo.tm_mday,timeinfo.tm_mon+1,1900+timeinfo.tm_year);
+			sprintf(textt,"%02d:%02d:%02d",timeinfo.tm_hour,timeinfo.tm_min,timeinfo.tm_sec);
+			if(xSemaphoreTake(I2CSem, portMAX_DELAY))
+			{
+				drawString(0, 51, string(textd), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+				drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+				if(displayMode==1)
+					displayBeats();
+				if(displayMode==2)
+					displayKwH();
+				xSemaphoreGive(I2CSem);
+			}
 		}
 	}
 }

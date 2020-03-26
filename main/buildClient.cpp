@@ -7,6 +7,7 @@ using namespace std;
 void kbd(void *arg);
 void start_webserver(void *arg);
 void sendStatusMeterAll();
+static int rsa_encrypt(char *nkey,size_t son,char *donde,size_t lenb);
 
 #ifdef DISPLAY
 void displayManager(void * pArg);
@@ -171,7 +172,6 @@ void timeKeeper(void *pArg)
 	while(true)
 	{
 		delay(theConf.sendDelay);		//configuration delay
-	//	delay(4000);
 		time(&now);
 		localtime_r(&now,&timep);
 		mesg=timep.tm_mon;   			// Global Month
@@ -380,7 +380,7 @@ static void read_flash()
 {
 	esp_err_t q ;
 	size_t largo;
-	q = nvs_open("config", NVS_READONLY, &nvshandle);
+	q = nvs_open((const char*)"config", NVS_READONLY,(unsigned int*) &nvshandle);
 	if(q!=ESP_OK)
 	{
 		pprintf("Error opening NVS Read File %x\n",q);
@@ -388,27 +388,27 @@ static void read_flash()
 	}
 
 	largo=sizeof(theConf);
-		q=nvs_get_blob(nvshandle,"config",(void*)&theConf,&largo);
+		q=nvs_get_blob((unsigned int)nvshandle,(const char*)"config",(void*)&theConf,(unsigned int*)&largo);
 
 	if (q !=ESP_OK)
 		pprintf("Error read %x largo %d aqui %d\n",q,largo,sizeof(theConf));
 
-	nvs_close(nvshandle);
+	nvs_close((unsigned int)nvshandle);
 }
 
 void write_to_flash() //save our configuration
 {
 	esp_err_t q ;
-	q = nvs_open("config", NVS_READWRITE, &nvshandle);
+	q = nvs_open("config", NVS_READWRITE,(unsigned int*) &nvshandle);
 	if(q!=ESP_OK)
 	{
 		pprintf("Error opening NVS File RW %x\n",q);
 		return;
 	}
-	q=nvs_set_blob(nvshandle,"config",(void*)&theConf,sizeof(theConf));
+	q=nvs_set_blob((unsigned int)nvshandle,"config",(void*)&theConf,sizeof(theConf));
 	if (q ==ESP_OK)
-		q = nvs_commit(nvshandle);
-	nvs_close(nvshandle);
+		q = nvs_commit((unsigned int)nvshandle);
+	nvs_close((unsigned int)nvshandle);
 }
 
 void connect_to_host(void *pArg)
@@ -417,17 +417,17 @@ void connect_to_host(void *pArg)
 	ip_addr_t 						remote;
 	u8 								aca[4];
 	tcpip_adapter_ip_info_t 		ip_info;
-    struct timeval to;
 	int addr_family;
 	int ip_protocol,err;
 
 	conn=false;
-
 	gsock=-1;
+
 	if(esp_wifi_connect()==ESP_OK)
 	{
 		if(theConf.traceflag & (1<<MSGD))
-			pprintf("%sEstablish connect\n",MSGDT);
+			pprintf("\n%sEstablish connect\n",MSGDT);
+		//wait for the Got IP handelr to set this bit
 		EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS); //wait for IP to be assigned
 		if ((uxBits & WIFI_BIT)!=WIFI_BIT)
 			vTaskDelete(NULL);
@@ -467,14 +467,11 @@ void connect_to_host(void *pArg)
 		conn=true;
         gpio_set_level((gpio_num_t)WIFILED, 1);			//WIFILED on. We have a connection and a socket to host
         xEventGroupSetBits(wifi_event_group, LOGIN_BIT);
-
-		vTaskDelete(NULL);
 	}
     else
     {
 		if(theConf.traceflag & (1<<MSGD))
 			pprintf("%sCould not esp_connect\n",MSGDT);
-		vTaskDelete(NULL);
     }
 	vTaskDelete(NULL);
 }
@@ -484,16 +481,17 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
 {
     switch (event_id) {
     	case WIFI_EVENT_STA_START:
-    	//	printf("start sta wifi\n");
     		xTaskCreate(&connect_to_host,"conn",4096,NULL, 4, NULL);
         break;
+    	case WIFI_EVENT_STA_STOP:
+    	//	pprintf("Wifi Stopped\n");
+    		break;
         case WIFI_EVENT_STA_CONNECTED:
-    //		printf("start wifi conn\n");
+    	//	printf("MtM Connected\n");
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             break; //wait for ip
         case WIFI_EVENT_STA_DISCONNECTED:
-    		printf("start wifi disco\n");
-
+        //	printf("MtM Disconnected\n");
             gpio_set_level((gpio_num_t)WIFILED, 0);
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             if(gsock>0)
@@ -519,9 +517,13 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
 
    switch (event_id) {
         case IP_EVENT_STA_GOT_IP:
-        	pprintf("\nIP Assigned:" IPSTR, IP2STR(&ev->ip_info.ip));	//print it for testing purposes
+        	if(theConf.traceflag & (1<<WIFID))
+        		pprintf("%sChanged %d IP Assigned to MtM:" IPSTR,"\n",WIFIDT,ev->ip_changed, IP2STR(&ev->ip_info.ip));	//print it for testing purposes
             xEventGroupSetBits(wifi_event_group, WIFI_BIT);
             break;
+        case IP_EVENT_STA_LOST_IP:
+     //   	pprintf("MtM Lost Ip/n");
+        	break;
         default:
             break;
     }
@@ -597,7 +599,7 @@ void write_to_fram(u8 meter,bool addit)
 		if(millis()-startGuard>60000)// every minute change guard
 		{
 			theGuard=esp_random();
-		//	gpio_set_level((gpio_num_t)TRIGGER, 0);
+		//	gpio_set_level((gpio_num_t)TRIGGER, 0);	//used for Logic Analyzer
 			fram.write_guard(theGuard);				// theguard is dynamic and will change every 60000ms
 	//		gpio_set_level((gpio_num_t)TRIGGER, 1);
 
@@ -649,33 +651,6 @@ void load_from_fram(u8 meter)
 	}
 }
 
-static void init_fram( bool load)
-{
-	// FRAM Setup. Will initialize the Semaphore. If NO FRAM, NO METER so it should really stop but for sakes of testing lets go on...
-	theGuard = esp_random();
-	framGuard=true;		//assume no FRAM, guard activated=true
-
-	spi_flash_init();
-
-	framFlag=fram.begin(FMOSI,FMISO,FCLK,FCS,&framSem); //will create SPI channel and Semaphore
-	if(framFlag)
-	{
-		framGuard=false;						//fram is not dead
-		//load all devices counters from FRAM
-		startGuard=millis();
-		fram.write_guard(theGuard);				// theguard is dynamic and will change every boot.
-		if(load)
-			for (int a=0;a<MAXDEVS;a++)
-			{
-				if(theConf.traceflag & (1<<FRAMD))
-					pprintf("%sLoading %d\n",FRAMDT,a);
-				load_from_fram(a);
-			}
-	}
-	else
-		framSem=NULL;
-}
-
 static void wifi_init(void)
 {
 	tcpip_adapter_ip_info_t 		ipInfo;
@@ -688,7 +663,7 @@ static void wifi_init(void)
 	else
 	    esp_netif_init();
 
-	esp_efuse_mac_get_default(them);
+	esp_efuse_mac_get_default((unsigned char*)them);
 
     //if imperative to change default 192.168.4.1 to anything else use below. Careful with esp_net_if deprecation warnings
 	if(!theConf.active)	{
@@ -727,6 +702,7 @@ static void wifi_init(void)
 				strcpy((char*)wifi_config.sta.ssid,theConf.mgrName);
 				strcpy((char*)wifi_config.sta.password,theConf.mgrPass);
 				ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+				ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 				ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 				esp_wifi_start();
 			}
@@ -746,10 +722,10 @@ static void wifi_init(void)
 			strcpy((char*)wifi_config.ap.password,tempb);
 			wifi_config.ap.authmode=WIFI_AUTH_WPA_PSK;
 			wifi_config.ap.ssid_hidden=false;
-			wifi_config.ap.beacon_interval=400;
+	//		wifi_config.ap.beacon_interval=400;
 			wifi_config.ap.max_connection=1;
 			wifi_config.ap.ssid_len=0;
-			wifi_config.ap.channel=1;
+	//		wifi_config.ap.channel=1;
 			ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
 			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
 			esp_wifi_start();
@@ -790,22 +766,24 @@ static void updateDateTime(loginT loginData)
 static cJSON *makeCmdcJSON(meterType *meter,bool ans)
 {
 	cJSON *cmdJ=cJSON_CreateObject();
-
-	cJSON_AddStringToObject(cmdJ,"cmd",				"/ga_status");
-	cJSON_AddStringToObject(cmdJ,"mid",				theConf.medidor_id[meter->pos]);
-	cJSON_AddNumberToObject(cmdJ,"Ts",				++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
-	cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
-	cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
-	cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
-	cJSON_AddBoolToObject(cmdJ,"reply",				ans);
-
+	if(cmdJ)
+	{
+		cJSON_AddStringToObject(cmdJ,"cmd",				"cmd_status");
+		cJSON_AddStringToObject(cmdJ,"mid",				theConf.medidor_id[meter->pos]);
+		cJSON_AddNumberToObject(cmdJ,"T#",				++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
+		cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
+		cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
+		cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
+		cJSON_AddBoolToObject(cmdJ,"reply",				ans);
+	}
 	return cmdJ;
 }
 
 static cJSON * makeGroupCmdAll()
 {
 	bool ans;
-	int van;
+	int van,blen,ret;
+	char *nkey=NULL,*b64=NULL;
 
 	/////// Create Message for Grouped Cmds ///////////////////
 	van=0;
@@ -817,6 +795,12 @@ static cJSON * makeGroupCmdAll()
 	}
 
 	cJSON *ar = cJSON_CreateArray();
+	if(!ar)
+	{
+		cJSON_Delete(root);
+		return NULL;
+	}
+
 	for (int a=0;a<MAXDEVS;a++)
 	{
 		if(theConf.configured[a]==3)
@@ -827,42 +811,192 @@ static cJSON * makeGroupCmdAll()
 			else
 				ans=false;
 			cJSON *cmdInt=makeCmdcJSON(&theMeters[a],ans);
-			cJSON_AddItemToArray(ar, cmdInt);
+			if(cmdInt)
+				cJSON_AddItemToArray(ar, cmdInt);
 		}
 	}
 	double dmac=(double)theMacNum;
 
-	cJSON_AddItemToObject		(root,"Batch",ar);
-	cJSON_AddStringToObject		(root,"Controller",theConf.meterName);
-	cJSON_AddNumberToObject		(root,"macn",dmac);
-	cJSON_AddBoolToObject		(root,"fram",framGuard);
+	cJSON_AddItemToObject			(root,"Batch",ar);
+	cJSON_AddStringToObject			(root,"Controller",theConf.meterName);
+	cJSON_AddNumberToObject			(root,"macn",dmac);
+	cJSON_AddBoolToObject			(root,"fram",framGuard);
+	if(rsyncf)						//send a rsync message to Host with new key
+	{
+		nkey=(char*)malloc(AESL); 		//get space for a new key
+		if(nkey)
+		{
+			// generate a random key 32(AESL) bytes in size
+			for (int a=0;a<AESL;a++)
+				nkey[a]=esp_random() % 256;
+			//	//get buffer for B64 of new key.
+			b64=(char*)malloc(BSIZE);
+			if(!b64)
+			{
+				pprintf("No RAM for b64\n");
+				free(nkey);
+				cJSON_Delete(root);
+				return NULL;
+			}
+			else
+			{
+				ret=mbedtls_base64_encode((unsigned char*)b64,BSIZE,(size_t*)&blen,(const unsigned char*)nkey,AESL);	//we have the new key in base64 for Login transmission
+				if(ret)
+					pprintf("Failed to b64 ret %d\n",ret);
+				else
+				{
+					theConf.lostSync=0;
+					cJSON_AddStringToObject(root,"rsync",b64);
+					memcpy(syncKey,nkey,AESL);	//copy new key to saved key for SendMeterAll
+				}
+			}
+		}
+		else
+			pprintf("No memory for key...incredibly low\n");
 
+		if(nkey)
+			free(nkey);
+		if(b64)
+			free(b64);
+	}
 	return root;
 }
 
-int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *donde,uint8_t maxx)
+int aes_decrypt(const char* src, size_t son, char *dst)
 {
-	ip_addr_t 						remote;
-	u8 								aca[4];
-	tcpip_adapter_ip_info_t 		ip_info;
-    struct timeval to;
-	int addr_family;
-	int ip_protocol,err;
+	bzero(dst,son);
+	if(!theConf.crypt)
+	{
+		memcpy(dst,src,son);
+		return ESP_OK;
+	}
+	bzero(iv,sizeof(iv));
+	esp_aes_setkey( &ctx,(const unsigned char*) theConf.lkey, 256 );			//key may be chanign on the Fly
+	esp_aes_crypt_cbc( &ctx, ESP_AES_DECRYPT, son, (unsigned char*)iv, (const unsigned char*)src,(unsigned char*) dst );
+	return ESP_OK;
+}
 
+int aes_encrypt(const char* src, size_t son, char *dst)
+{
+	bzero(dst,son);
+	if(!theConf.crypt)
+	{
+		memcpy(dst,src,son);
+		return ESP_OK;
+	}
+	int theSize= son+ 16- (son % 16);
 
-	if(theConf.traceflag & (1<<MSGD))
-		pprintf("%sSending queue size %d\n",MSGDT,son);
-
-	// err = send(gsock, (char*)lmessage, strlen((char*)lmessage), 0);
-	 err = send(gsock, (char*)lmessage, son, 0);
-	 if (err < 0)
-	 {
-		if(theConf.traceflag & (1<<MSGD))
-			pprintf( "%sSock %d Error occurred during sending: errno %d\n",MSGDT,gsock, errno);
-	//	close(gsock);
-	//	conn=false;
+	char *donde=(char*)malloc(theSize);
+	if (!donde)
+	{
+		pprintf("No memory copy message\n");
 		return -1;
 	}
+	bzero(donde,theSize);
+	memcpy(donde,src,son);
+
+	bzero(iv,sizeof(iv));
+	esp_aes_setkey( &ctx,(const unsigned char*) theConf.lkey, 256 );			//key may be chanign on the Fly
+	esp_aes_crypt_cbc( &ctx, ESP_AES_ENCRYPT, theSize, (unsigned char*)iv,(const unsigned char*) donde,( unsigned char*) dst );
+	free(donde);
+	return ESP_OK;
+}
+//
+//void connect_to_sock()
+//{
+//
+//	ip_addr_t 						remote;
+//	u8 								aca[4];
+//	tcpip_adapter_ip_info_t 		ip_info;
+//	int addr_family;
+//	int ip_protocol,err;
+//
+//	conn=false;
+//	gsock=-1;
+//
+//	if(esp_wifi_connect()==ESP_OK)
+//	{
+//
+//		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+//		memcpy(&aca,&ip_info.gw,4);
+//		IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
+//
+//		struct sockaddr_in dest_addr;
+//		memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);	//send to our gateway, which is our server
+//		dest_addr.sin_family = AF_INET;
+//		dest_addr.sin_port = htons(BDGHOSTPORT);
+//		addr_family = AF_INET;
+//		ip_protocol = IPPROTO_IP;
+//	 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+//
+//		gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
+//		if (gsock < 0) {
+//			pprintf( "Unable to create socket: errno %d\n", errno);
+//			return;
+//		}
+//	//	if(theConf.traceflag & (1<<MSGD))
+//			pprintf("%sSocket %d created, connecting to %s:%d\n",MSGDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
+//
+//		err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+//		if (err != 0)
+//		{
+//	//		if(theConf.traceflag & (1<<MSGD))
+//				pprintf( "%sSocket unable to connect: errno %d\n",MSGDT, errno);
+//			return;
+//		}
+////		conn=true;
+//   //     gpio_set_level((gpio_num_t)WIFILED, 1);			//WIFILED on. We have a connection and a socket to host
+//   //    xEventGroupSetBits(wifi_event_group, LOGIN_BIT);
+//
+//	//	vTaskDelete(NULL);
+//	}
+//    else
+//    {
+//		if(theConf.traceflag & (1<<MSGD))
+//			pprintf("%sCould not esp_connect\n",MSGDT);
+//	//	vTaskDelete(NULL);
+//    }
+//	return;
+//}
+
+int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *rdonde,uint16_t maxx)
+{
+    struct timeval to;
+	int err,llen;
+
+//	connect_to_sock();
+
+	int theSize=son;
+	int rem= theSize % 16;
+	theSize+=16-rem;			//round to next 16 for AES
+
+	char *output=(char*)malloc(theSize);
+	if (!output)
+	{
+		pprintf("No memory ouput message\n");
+		return -1;
+	}
+
+	if(theConf.traceflag & (1<<MSGD))
+		pprintf("%sSending queue size %d %s\n",MSGDT,son,lmessage);
+
+	if(aes_encrypt((const char*)lmessage,son,output)!=0)
+	{
+		pprintf("Failed to encrypt SendMsg\n");
+		free(output);
+		return -1;
+	}
+
+	err = send(gsock, output, theSize, 0);
+	if (err < 0)
+	{
+		if(theConf.traceflag & (1<<MSGD))
+			pprintf( "%sSock %d Error occurred during sending: errno %d\n",MSGDT,gsock, errno);
+		free(output);
+		return -1;
+	}
+
+	free(output);	//not needed anymore
 
 	 if(maxx>0)		//wait for reply
 	 {
@@ -870,149 +1004,211 @@ int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *donde,uint8_t maxx)
 		to.tv_usec = 0;
 
 		if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
-
 		{
 			if(theConf.traceflag & (1<<MSGD))
 				pprintf("Unable to set read timeout on socket!\n");
 			return -1;
 		}
 
-		int len = recv(gsock, donde, maxx, 0);
-		int len1=len;
+		char *response=(char*)malloc(maxx);
+		if(!response)
+		{
+			pprintf("Failed to get RAM for response\n");
+			return -1;
+		}
+
+		llen = recv(gsock, response, maxx, 0);
+
+		if(llen<0)
+		{
+			//timeout. Start counting lost Syncs.
+			theConf.lostSync++;
+			if(theConf.lostSync>MAXLOSTSYNC)
+			{
+				pprintf("Reseting key to default\n");
+				memset(theConf.lkey,65,AESL);
+				esp_aes_setkey( &ctx,(const unsigned char*) theConf.lkey, 256 );
+				theConf.lostSync=0;
+				rsyncf=true;
+			}
+		}
+		else
+		{
+			theConf.lostSync=0;
+			//	get the decrypted message. Must be a cJSON as first guard
+			aes_decrypt((const char*)response,llen,(char*)rdonde);
+			if(*rdonde!='{')		//start of any cJSON
+			{
+			//	pprintf("Not cJSON Client\n");
+				theConf.lostSync++;
+				if(theConf.lostSync>MAXLOSTSYNC-1)	//rsync,set default aes key
+				{
+					memset(theConf.lkey,65,AESL);
+					esp_aes_setkey( &ctx, (const unsigned char*)theConf.lkey, 256 );
+					theConf.lostSync=0;
+					rsyncf=true;
+				}
+			}
+		}
+
+		free(response);			// not needed anymore
 
 		if(theConf.traceflag & (1<<MSGD))
-			pprintf("%sSendmsg response size %d\n",MSGDT,len1);
-		return len1;
+			pprintf("%sSendmsg response size %d\n",MSGDT,llen);
+
+		return llen;
 	 }
 	return 0;
 }
 
-
-static void logIn()
+static int rsa_encrypt(char *nkey,size_t son,char *donde,size_t lenb)
 {
-    loginT loginData;
-    size_t ret;
-	size_t olen = 0;
-	char * buf=malloc(1024);
-	char * b64=malloc(1000);
+	int ret;
+	int olen=0;
 
-	memset( iv, 0, sizeof( iv ) );
-	memset( key, 65, sizeof( key ) );
-
-	esp_aes_init( &ctx );
-	esp_aes_setkey( &ctx, key, 256 );		//send first Login with known secret AES
-
-
-	mbedtls_entropy_context entropy;
-	extern const unsigned char cacert_pem_start[] asm("_binary_public_pem_start");
-	extern const unsigned char cacert_pem_end[]   asm("_binary_public_pem_end");
-	int len = cacert_pem_end - cacert_pem_start;
-
-	mbedtls_ctr_drbg_init(&ctr_drbg);
-	mbedtls_entropy_init(&entropy);
-	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
+	char *buf=(char*)malloc(1024);	//max size for RSA key encryption
+	if(!buf)
 	{
-	printf("failed seed %x\n",ret);
-	return false;
+		printf("No RAM for buf\n");
+		return -1;
 	}
 
-	char *nkey=malloc(32);
-	for (int a=0;a<32;a++)
-		nkey[a]=esp_random() %256;
-	memset(nkey,66,32);//test should change to BBBBBBBB
-
-	mbedtls_pk_init( &pk );
-
-	if( ( ret = mbedtls_pk_parse_public_key( &pk,cacert_pem_start,len) ) != 0 )
-	printf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
-	else
-	{
-	//	printf("Public Ok\n");
-
-	/*
-	 * Calculate the RSA encryption of the data.
-	 */
-	if( ( ret = mbedtls_pk_encrypt( &pk, nkey, sizeof(key),
-									buf, &olen, 1024,
-									mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
+	// now encrypt the Key into the Buf buffer, olen has the final number of bytes
+	if((ret = mbedtls_pk_encrypt( &pk, (const unsigned char*)nkey, son,(unsigned char*)buf, (size_t*)&olen, 1024,mbedtls_ctr_drbg_random, &ctr_drbg)) != 0 )
 	{
 		printf( " failed\n  ! mbedtls_pk_encrypt returned -0x%04x\n", -ret );
-	}
-	//		else
-	//			printf("Encrypted len %d\n",olen);
+		free(buf);
+		return -1;
 	}
 	size_t blen;
-	ret=mbedtls_base64_encode(b64,1000,&blen,buf,olen);
-	//	if(ret==0)
-	//		printf("Base64[%d] %s\n",blen,b64);
 
+	//to base64 to be able to inserty in a cJSON message
+	ret=mbedtls_base64_encode((unsigned char*)donde,lenb,&blen,(const unsigned char*)buf,olen);	//we have the new key in base64 for Login transmission
+	if(ret)
+	{
+		printf("Failed to b64 ret %d\n",ret);
+		free(buf);
+		return ret;
+	}
+	if(buf)
+		free(buf);
+	return ESP_OK;
+}
 
+static int logIn()
+{
+
+	int rsa_status=0,err=0;
+	double dmac=0.0;
+
+    loginT loginData;
+	char *nkey=NULL,*b64=NULL,*logMsg=NULL,*tmp=NULL;
+	cJSON *root=NULL,*cmdJ=NULL,*ar=NULL;
+
+	nkey=(char*)malloc(AESL); 		//get space for a new key
+	if(nkey)
+	{
+		// generate a random key 32(AESL) bytes in size
+		for (int a=0;a<AESL;a++)
+			nkey[a]=esp_random() % 256;
+	}
+	else
+	{
+		pprintf("No memory for key...incredibly low\n");
+		err=-1;
+		goto exit;
+	}
+
+//	//get buffer for B64 of new key.
+	b64=(char*)malloc(BSIZE);
+	if(!b64)
+	{
+		pprintf("No RAM for b64\n");
+		err=-2;
+		goto exit;
+	}
+	bzero(b64,BSIZE);
+
+	rsa_status=rsa_encrypt(nkey,AESL,b64,BSIZE);	//should check for error creating rsa/b64 key. Not going to work after this point
+	if(rsa_status!=ESP_OK)
+	{
+		pprintf("Failed RSA-B64 Process\n");
+		err=-3;
+		goto exit;
+	}
 
 	setenv("TZ", LOCALTIME, 1);
 	tzset();
 
-	cJSON *root=cJSON_CreateObject();
-	cJSON *cmdJ=cJSON_CreateObject();
-	cJSON *ar = cJSON_CreateArray();
+	root=		cJSON_CreateObject();
+	cmdJ=		cJSON_CreateObject();
+	ar= 		cJSON_CreateArray();
 
 	if(root==NULL)
 	{
 		pprintf("cannot create root\n");
-		return;
+		goto exit;
 	}
 
-	cJSON_AddStringToObject(cmdJ,"password","zipo");
-	cJSON_AddStringToObject(cmdJ,"cmd","/ga_login");
-	cJSON_AddStringToObject(cmdJ,"key",b64);
+	//create message password,cmd,aes key, mac# and array
+	dmac=(double)theMacNum;
 
-	cJSON_AddItemToArray(ar, cmdJ);
-	cJSON_AddItemToObject(root, "Batch",ar);
-	double dmac=(double)theMacNum;
-	cJSON_AddNumberToObject(root,"macn",dmac);
-	char *logMsg=cJSON_Print(root);
-	int theSize=strlen(logMsg);
+	cJSON_AddStringToObject	(cmdJ,"password","zipo");
+	cJSON_AddStringToObject	(cmdJ,"cmd","cmd_login");
+	cJSON_AddStringToObject	(cmdJ,"key",b64);
+	cJSON_AddItemToArray	(ar, cmdJ);
+	cJSON_AddItemToObject	(root, "Batch",ar);
+	cJSON_AddNumberToObject	(root,"macn",dmac);
 
-	int rem= theSize % 16;
-	theSize+=16-rem;			//round to next 16 for AES
+	logMsg=cJSON_Print(root);		//message to send in the clear. Sendmsg will encrypt AES
+	if(!logMsg)
+	{
+		pprintf("No memory for logMsg\n");
+		goto exit;
+	}
 
-	char * donde=(char*)malloc(theSize);
-	if (!donde)
+	bzero(&loginData,sizeof(loginData));
+
+	tmp=(char*)malloc(1024);
+	if(tmp)
+	{
+		int fueron=sendMsg((uint8_t*)logMsg,strlen(logMsg),(uint8_t*)tmp, 1024);		//send it encrypted
+		if(fueron>0)
 		{
-		printf("No memory copy message\n");
-		return;
+			//its a JSON struct parse it and get err and ts
+			tmp[fueron]=0;
+			cJSON *theAns= cJSON_Parse(tmp);
+			if(theAns)
+			{
+				//got a good json
+				if(theConf.traceflag & (1<<MSGD))
+					pprintf("%sAnswer Login %s\n",MSGDT,tmp);
+			//	cJSON *err= 		cJSON_GetObjectItem(theAns,"err");
+				cJSON *timeStamp= 	cJSON_GetObjectItem(theAns,"Ts");
+				cJSON *tar= 		cJSON_GetObjectItem(theAns,"Tar");
+				if(tar)
+					loginData.theTariff=tar->valueint;
+				if(timeStamp)
+					loginData.thedate=(time_t)timeStamp->valueint;
+			}
+
+			if(rsa_status==ESP_OK) //must be done her so that SendMsg uses the Known key
+			{
+			//	printf("Login RSA\n");
+				memcpy(theConf.lkey,nkey,AESL);
+				write_to_flash();
+				esp_aes_setkey( &ctx, (const unsigned char*)theConf.lkey, 256 );	//now definite else keep old key
+			}
 		}
-	bzero(donde,theSize);
-
-	memcpy(donde,logMsg,strlen(logMsg));
-
-	char * output=(char*)malloc(theSize);
-	if (!output)
-		{
-		printf("No memory ouput message\n");
-		return;
-		}
-	bzero(output,theSize);
-
-	bzero(iv,sizeof(iv));
-	bzero(output,theSize);
-//	printf("Login bkey %s\n",key);
-	esp_aes_crypt_cbc( &ctx, ESP_AES_ENCRYPT, theSize, iv, donde, output );
-
-
-	memset((void*)&loginData,0,sizeof(loginData));
-	char *tmp=(char*)malloc(100);
-//	int fueron=sendMsg((uint8_t*)logMsg,strlen(logMsg),(uint8_t*)tmp, 100);
-	int fueron=sendMsg((uint8_t*)output,theSize,(uint8_t*)tmp, 100);
-	if(fueron>0)
-		memcpy((void*)&loginData,tmp,sizeof(loginData));
-	free(tmp);
-
-	memcpy(key,nkey,32);
-	esp_aes_setkey( &ctx, key, 256 );	//now definite
-////	printf("After Key %s\n",key);
-	free(nkey);
+	}
+	else
+	{
+		pprintf("No memory for Answer\n");
+		goto exit;
+	}
 
 	updateDateTime(loginData);
+
 	oldMesg=mesg;
 	oldDiag=diag;
 	oldHorag=horag;
@@ -1021,89 +1217,784 @@ static void logIn()
 	if(theConf.traceflag & (1<<CMDD))
 		pprintf("%sLogin year %d month %d day %d hour %d Tariff %d YDAY %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff,oldYearDay);
 
-	free(logMsg);
-	cJSON_Delete(root);
-	if(donde)
-	{
-		free(donde);
-		donde=NULL;
-	}
-	if(output)
-	{
-		free(output);
-		output=NULL;
-	}
+	//free our people...
+	exit:
+	if(tmp)
+		free(tmp);
+	if(logMsg)
+		free(logMsg);
+	if(root)
+		cJSON_Delete(root);
+	if(b64)
+		free(b64);
+	if(nkey)
+		free(nkey);
+
+	return err;
 }
 
-void dump(char * title,char *desde, int son)
+int findMeter(char*cualm)
 {
-	printf("%s  %p\n",title,desde);
-	for (int a=0;a<son;a++)
-		printf("%02x",desde[a]);
-	printf("\n");
+	for (int a=0;a<MAXDEVS;a++)
+		if(strcmp(theConf.medidor_id[a],cualm)==0)
+			return a;
+	return -1;
+}
+
+//cJSON *commonResponse(uint8_t cualm)
+//{
+//	cJSON *cmdJ=cJSON_CreateObject();
+//	if(cmdJ)
+//	{
+//		cJSON_AddStringToObject			(cmdJ,"cmd","cmd_sendHost");
+//		cJSON_AddStringToObject			(cmdJ,"MtM",theConf.meterName);
+//		cJSON_AddStringToObject			(cmdJ,"MID",theConf.medidor_id[cualm]);
+//		cJSON_AddStringToObject			(cmdJ,"connmgr",globalConn);
+//	}
+//	return cmdJ;
+//}
+
+bool isnumber(char* data)
+{
+	for (int a=0;a<strlen(data);a++)
+	{
+		if (!isdigit(data[a]))
+			return false;
+	}
+	return true;
+}
+int sendReplyToHost(int cualm,int son,char* cmdI, ...)
+{
+	va_list args;
+	va_start(args,cmdI);
+	printf("Sendreply\n");
+	cJSON *root=cJSON_CreateObject();
+
+	if(root)
+	{
+		cJSON *ar = cJSON_CreateArray();
+		if(ar)
+		{
+			cJSON *cmdJ=cJSON_CreateObject();
+			if(cmdJ)
+			{
+				cJSON_AddStringToObject			(cmdJ,"cmd","cmd_sendHost");
+				cJSON_AddStringToObject			(cmdJ,"MtM",theConf.meterName);
+				cJSON_AddStringToObject			(cmdJ,"MID",theConf.medidor_id[cualm]);
+				cJSON_AddStringToObject			(cmdJ,"connmgr",globalConn);
+				char *key=cmdI;
+				for(int a=0;a<son;a++)
+				{
+					char *xx=(char*)va_arg(args,int);
+					if(!isnumber(xx))
+						cJSON_AddStringToObject			(cmdJ,key,xx);
+					else
+						cJSON_AddNumberToObject			(cmdJ,key,atoi(xx));
+
+					if(a<son-1)
+						key=(char*)va_arg(args,int);
+				}
+				va_end(args);
+				cJSON_AddItemToArray			(ar, cmdJ);
+			}
+
+			double dmac						=(double)theMacNum;
+			cJSON_AddItemToObject			(root,"Batch",ar);
+			cJSON_AddNumberToObject			(root,"macn",dmac);
+			char *lmessage=cJSON_Print(root);
+			if(lmessage)
+			{
+				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+	//			printf("Mensaje %s\n",lmessage);
+				free(lmessage);
+			}
+			cJSON_Delete(root);
+			return ESP_OK;
+		}
+		else
+		{
+			cJSON_Delete(root);
+			return ESP_FAIL;
+		}
+	}
+	else
+		return ESP_FAIL;
+}
+
+int setBPK(cJSON *theJSON,uint8_t cualm)
+{
+	char numa[10],numb[10];
+
+	cJSON *bpk=cJSON_GetObjectItem(theJSON,"bpk");
+	cJSON *born=cJSON_GetObjectItem(theJSON,"born");
+	if(!bpk || !born)
+		return -1;
+
+	theConf.beatsPerKw[cualm]=bpk->valueint;	// beat per KW. MAGIC number.
+	theConf.bornKwh[cualm]=born->valueint;		// Initial KW in meter
+	time(&theConf.bornDate[cualm]);				// save current date a birthday
+	write_to_flash();
+
+	//update FRAM values
+	fram.formatMeter(cualm);
+	fram.write_lifekwh(cualm,born->valueint);
+
+	theMeters[cualm].curLife=born->valueint;	//for display
+
+	theMeters[cualm].beatsPerkW=theMeters[cualm].curMonth=theMeters[cualm].curMonthRaw=theMeters[cualm].curDay=theMeters[cualm].curDayRaw=0;
+	theMeters[cualm].curCycle=theMeters[cualm].currentBeat=theMeters[cualm].beatSave=theMeters[cualm].beatSaveRaw=0;
+	theMeters[cualm].curHour=theMeters[cualm].curHourRaw=0;
+
+	// send confirmation of cmd received
+
+	itoa(bpk->valueint,numa,10);
+	itoa(born->valueint,numb,10);
+	sendReplyToHost(cualm,1,(char*)"BPK",numa,"BORN",numb);
+	return ESP_OK;
+
+
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddNumberToObject			(cmdJ,"BPK",bpk->valueint);
+//		cJSON_AddNumberToObject			(cmdJ,"BORN",born->valueint);
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//		return ESP_OK;
+//	}
+//
+//	 return ESP_OK;
+}
+
+
+int zeroCmd(cJSON *theJSON,uint8_t cualm)
+{
+	memset(theConf.lkey,65,AESL);
+	write_to_flash();
+	esp_aes_setkey( &ctx, (unsigned char*)theConf.lkey, 256 );
+
+	return ESP_OK;
+}
+
+int displayCmd(cJSON *theJSON,uint8_t cualm)
+{
+	cJSON *dispmode=cJSON_GetObjectItem(theJSON,"mode");
+	if(dispmode)
+	{
+		int dis=dispmode->valueint;
+		if(dis>2)
+			dis=2;
+		displayMode=dis;
+	}
+	else
+		return -1;
+	return ESP_OK;
+}
+
+int setDelayCmd(cJSON *theJSON,uint8_t cualm)
+{
+	char numa[10];
+
+	cJSON *delaym=cJSON_GetObjectItem(theJSON,"delay");
+	if(delaym)
+	{
+		theConf.sendDelay=delaym->valueint;
+		write_to_flash();
+	}
+	else
+		return -1;
+
+	itoa(delaym->valueint,numa,10);
+	sendReplyToHost(cualm,1,(char*)"DELAYSET",numa);
+	return ESP_OK;
+
+
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddNumberToObject			(cmdJ,"DELAYSET",delaym->valueint);
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//	}
+//	return ESP_OK;
+}
+
+int sendMonthCmd(cJSON *theJSON,uint8_t cualm)
+{
+	uint16_t theMonth;
+	char numa[10],numb[10];
+
+	cJSON *param=cJSON_GetObjectItem(theJSON,"month");
+	if(param)
+	{
+		fram.read_month(cualm,param->valueint,(uint8_t*)&theMonth);
+	//	printf("Month[%d]=%d\n",param->valueint,theMonth);
+	}
+	else
+		return -1;
+
+	itoa(param->valueint,numa,10);
+	itoa(theMonth,numb,10);
+	printf("Sending reply %s %s\n",numa,numb);
+	sendReplyToHost(cualm,2,(char*)"Month",(char*)numa,(char*)"KwH",(char*)numb);
+	return ESP_OK;
+
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddNumberToObject			(cmdJ,"Month",param->valueint);
+//		cJSON_AddNumberToObject			(cmdJ,"KWH",theMonth);
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//		return ESP_OK;
+//	}
+//	else
+//		return -1;
+}
+
+int sendMonthsInYearCmd(cJSON *theJSON,uint8_t cualm)
+{
+	uint16_t theMonth[12];
+	char temp[10];
+	string todos="";
+
+	for(int a=0;a<12;a++)
+	{
+		fram.read_month(cualm,a,(uint8_t*)&theMonth[a]);
+	//	printf("MY[%d]=%d ",a,theMonth[a]);
+		sprintf(temp,"%d|",theMonth[a]);
+		todos+=string(temp);
+	}
+//	printf("\n Temp %s\n",todos.c_str());
+
+	sendReplyToHost(cualm,1,(char*)"MonthsKWH",(char*)todos.c_str());
+	return ESP_OK;
+
+//	cJSON *root=cJSON_CreateObject();
+//		if(root)
+//		{
+//			cJSON *ar = cJSON_CreateArray();
+//			cJSON *cmdJ=commonResponse(cualm);
+//			if(!cmdJ)
+//			{
+//				cJSON_Delete(root);
+//				return -1;
+//			}
+//
+//			double dmac						=(double)theMacNum;
+//
+//			cJSON_AddStringToObject			(cmdJ,"MonthsKWH",todos.c_str());
+//			cJSON_AddItemToArray			(ar, cmdJ);
+//			cJSON_AddItemToObject			(root,"Batch",ar);
+//			cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//			char *lmessage=cJSON_Print(root);
+//			if(lmessage)
+//			{
+//				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//				free(lmessage);
+//			}
+//			cJSON_Delete(root);
+//			todos="";
+//			return ESP_OK;
+//		}
+//		else
+//			return -1;
+}
+
+int sendDayCmd(cJSON *theJSON,uint8_t cualm)
+{
+	uint16_t theDay;
+	char numa[10],numb[10];
+
+	cJSON *param=cJSON_GetObjectItem(theJSON,"day");
+	if(param)
+	{
+		fram.read_day(cualm,(uint16_t)param->valueint,(uint8_t*)&theDay);
+	//	printf("Day[%d]=%d\n",param->valueint,theDay);
+	}
+	else
+		return -1;
+
+	itoa(param->valueint,numa,10);
+	itoa(theDay,numb,10);
+	sendReplyToHost(cualm,2,(char*)"Day",numa,"KwH",numb);
+
+	return ESP_OK;
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddNumberToObject			(cmdJ,"Day",param->valueint);
+//		cJSON_AddNumberToObject			(cmdJ,"KwH",theDay);
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//		return ESP_OK;
+//	}
+//	return -1;
+}
+
+int sendKwHCmd(cJSON *theJSON,uint8_t cualm)
+{
+	uint32_t kwh;
+	char numa[10];
+
+	fram.read_lifekwh(cualm,(uint8_t*)&kwh);
+//	printf("KwH[%d]=%d\n",cualm,kwh);
+	itoa(kwh,numa,10);
+	sendReplyToHost(cualm,1,(char*)"KwH",numa);
+	return ESP_OK;
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddNumberToObject			(cmdJ,"KwH",kwh);
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//		return ESP_OK;
+//	}
+//	return -1;
+
+}
+
+
+int sendBeatsCmd(cJSON *theJSON,uint8_t cualm)
+{
+	uint32_t beats;
+	char numa[10];
+
+	fram.read_beat(cualm,(uint8_t*)&beats);
+//	printf("Beats[%d]=%d\n",cualm,beats);
+
+	itoa(beats,numa,10);
+	sendReplyToHost(cualm,1,(char*)"Beats",numa);
+	return ESP_OK;
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddNumberToObject			(cmdJ,"Beats",to_string(beats).c_str());
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//		return ESP_OK;
+//	}
+//		return -1;
+
+}
+
+int sendDaysInYearCmd(cJSON *theJSON,uint8_t cualm)
+{
+	uint16_t theDay[366];
+	string todos="";
+	char temp[10];
+
+	for(int a=0;a<366;a++)
+	{
+		fram.read_day(cualm,a,(uint8_t*)&theDay[a]);
+	//	printf("DY[%d]=%d ",a,theDay[a]);
+		sprintf(temp,"%d|",theDay[a]);
+		todos+=string(temp);
+	}
+
+	sendReplyToHost(cualm,1,(char*)"DY",todos.c_str());
+	return ESP_OK;
+
+//	printf("\n %s\n",todos.c_str());
+//	cJSON *root=cJSON_CreateObject();
+//	if(root)
+//	{
+//		cJSON *ar = cJSON_CreateArray();
+//		cJSON *cmdJ=commonResponse(cualm);
+//		if(!cmdJ)
+//		{
+//			cJSON_Delete(root);
+//			return -1;
+//		}
+//
+//		double dmac						=(double)theMacNum;
+//
+//		cJSON_AddStringToObject			(cmdJ,"DY",todos.c_str());
+//		cJSON_AddItemToArray			(ar, cmdJ);
+//		cJSON_AddItemToObject			(root,"Batch",ar);
+//		cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//		char *lmessage=cJSON_Print(root);
+//		if(lmessage)
+//		{
+//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//			free(lmessage);
+//		}
+//		cJSON_Delete(root);
+//		return ESP_OK;
+//	}
+//	return -1;
+	todos="";
+}
+
+int sendDaysInMonthCmd(cJSON *theJSON,uint8_t cualm)
+{
+	int desde=0,hasta;
+	string todos="";
+	char	temp[10];
+
+	cJSON *param=cJSON_GetObjectItem(theJSON,"month");
+	if(param)
+	{//need to calculate first and last day
+		uint16_t theMonth;
+
+			for (int a=0;a<param->valueint;a++)
+				desde+=daysInMonth[a];
+			hasta=desde+daysInMonth[param->valueint];
+			for(int a=desde;a<hasta;a++)
+			{
+				fram.read_day(cualm,a,(uint8_t*)&theMonth);
+			//	printf("DM[%d]=%d ",a,theMonth);
+				sprintf(temp,"%d|",theMonth);
+				todos+=string(temp);
+			}
+	//		printf("\n");
+
+		sendReplyToHost(cualm,1,(char*)"DM",todos.c_str());
+		return ESP_OK;
+
+//		cJSON *root=cJSON_CreateObject();
+//		if(root)
+//		{
+//			cJSON *ar = cJSON_CreateArray();
+//			cJSON *cmdJ=commonResponse(cualm);
+//			if(!cmdJ)
+//			{
+//				cJSON_Delete(root);
+//				return -1;
+//			}
+//
+//			double dmac						=(double)theMacNum;
+//
+//			cJSON_AddStringToObject			(cmdJ,"DM",todos.c_str());
+//			cJSON_AddItemToArray			(ar, cmdJ);
+//			cJSON_AddItemToObject			(root,"Batch",ar);
+//			cJSON_AddNumberToObject			(root,"macn",dmac);
+//
+//			char *lmessage=cJSON_Print(root);
+//			if(lmessage)
+//			{
+//				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
+//				free(lmessage);
+//			}
+//			cJSON_Delete(root);
+//			return ESP_OK;
+//		}
+//			else
+//				return -1;
+	}
+	else
+		return -1;
+}
+static int findCommand(char * cual)
+{
+	for (int a=0;a<MAXCMDS;a++)
+	{
+			if(strcmp(cmds[a].comando,cual)==0)
+			return a;
+	}
+	return -1;
+}
+
+
+void cmdManager(void *parg)
+{
+	// logic to implement
+	int forMeter=0,cualf;
+	char *cmd=(char*)parg;				//must free it when done
+//	printf("Cmd received [%s]\n",cmd);
+	cJSON *elcmd= cJSON_Parse(cmd);
+	if(elcmd)
+	{
+		cJSON *outer= cJSON_GetObjectItem(elcmd,"hostCmd");	//array of cmds for each MID
+		if(outer)
+		{
+			int son=cJSON_GetArraySize(outer);
+			for (int a=0;a<son;a++)
+			{
+				cJSON *cmdIteml = cJSON_GetArrayItem(outer, a);//next item
+				cJSON *para= cJSON_GetObjectItem(cmdIteml,"MID");
+				cJSON *cmdd= cJSON_GetObjectItem(cmdIteml,"cmd");
+				if(!para)
+				{
+					printf("[Syntax]No MID sent\n");
+				}
+				else
+				{
+					forMeter=para->valueint;
+					if(cmdd)
+					{
+						//printf("Cmd[%d]=%s\n",a,cmdd->valuestring);
+						cJSON *inner=cJSON_Parse(cmdd->valuestring);
+						if(inner)
+						{
+							cJSON *forwhom= cJSON_GetObjectItem(inner,"to");
+							if(forwhom)
+							{
+								if(strcmp(forwhom->valuestring,theConf.medidor_id[forMeter])==0)
+								{
+									//printf("For %s \n",forwhom->valuestring);
+									cJSON *imonton= cJSON_GetObjectItem(inner,"Batch");
+									if(imonton)
+									{
+										int ison=cJSON_GetArraySize(imonton);
+										for(int b=0;b<ison;b++)
+										{
+											cJSON *icmdIteml = cJSON_GetArrayItem(imonton, b);//next item
+											if(icmdIteml)
+											{
+												cJSON *icmd= cJSON_GetObjectItem(icmdIteml,"cmd");
+												if(icmd)
+												{
+												//	printf("Inner %d-%d cmd %s\n",b,ison,icmd->valuestring);
+													//execute the Cmd. Pass the original cJSON string icmditeml so he can process the Arguments
+													cualf=findCommand(icmd->valuestring);
+													if(cualf<0){
+														printf("Invalid cmd rx %s\n",icmd->valuestring);
+													}
+													else
+													{
+														//process this command
+														(*cmds[cualf].code)(icmdIteml,forMeter);
+													//	printf("Cmd result=%d\n",mres);
+													}
+												}
+												else
+												{
+													printf("No cmd innerIteml %d\n",b);
+												}
+											}
+											else
+											{
+												printf("failed inner Item %d\n",b);
+											}
+										}
+									}
+									else
+									{
+										printf("[Syntax]HostCmd sent without Batch\n");
+									}
+								}
+								else
+								{
+									printf("Invalid MID %d for name %s\n",forMeter,theConf.medidor_id[forMeter]); //will never get this message cause. It will not be saved by BulkidMgr without a destination
+								}
+							}
+							else
+							{
+								printf("[Syntax]HostCmd without 'To'\n");
+							}
+							cJSON_Delete(inner);
+						}
+					}
+				}
+			}
+		}
+		cJSON_Delete(elcmd);
+	}
+	free(cmd);
+	vTaskDelete(NULL);
 }
 
 void sendStatusMeterAll()
 {
     loginT 	loginData;
-    int sendStatus;
-    char *lmessage=NULL;
+    int 	sendStatus;
+    char 	*lmessage=NULL,*ans=NULL;
 
 	if(theConf.traceflag & (1<<CMDD))
 	{
 		pprintf("%sSendM %d Heap %d wait %d... ",CMDDT,++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
 		fflush(stdout);
 	}
+
 	cJSON *root=makeGroupCmdAll();
 	if(root)
 		lmessage=cJSON_Print(root);
+	else
+	{
+		pprintf("Cannot create cjson root\n");
+		return;
+	}
+
+	cJSON_Delete(root);
 
 	if(!lmessage)
 	{
-		printf("No message\n");
-		return -1;
+		pprintf("No message\n");
+		return;
 	}
 
 	bzero(&loginData,sizeof(loginData));
-	bzero(iv,sizeof(iv));
-
-	int theSize=strlen(lmessage);
-	int rem= theSize % 16;
-	theSize+=16-rem;			//round to next 16 for AES
-
-	char * donde=(char*)malloc(theSize);
-	if (!donde)
-		{
-		printf("No memory copy message\n");
-		return;
-		}
-	bzero(donde,theSize);
-
-	memcpy(donde,lmessage,strlen(lmessage));
-	char * output=(char*)malloc(theSize);
-	if (!output)
-		{
-		printf("No memory ouput message\n");
-		return;
-		}
-	bzero(output,theSize);
-
-	esp_aes_crypt_cbc( &ctx, ESP_AES_ENCRYPT, theSize, iv, donde, output );
 
 	//receive buffer greater than expected since we are sending 5 status messages and will receive 5 answers.
 	// if we do not do this the sendmsg socket will SAVE the other answers for next call and never gets the logindate correct
-	void *ans=malloc(100);
+	ans=(char*)malloc(1024);
 	if(!ans)
 	{
-		printf("No ram for Ans\n");
+		pprintf("No ram for Ans\n");
+		free(lmessage);
 		return;
 	}
-//	sendStatus=sendMsg((uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ans,100);
-	sendStatus=sendMsg((uint8_t*)output,theSize,(uint8_t*)ans,100);
+
+	bzero(ans,1024);
+
+	sendStatus=sendMsg((uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ans,1024);
 	if(sendStatus>=0)
 	{
+		free(lmessage);		//not needed any more
+		//its a JSON struct parse it and get err and ts
+		cJSON *theAns= cJSON_Parse(ans);
+		if(theAns)
+		{
+			//got a good json
+			if(theConf.traceflag & (1<<MSGD))
+				printf("%sAnswer %s\n",MSGDT,ans);
+	//		cJSON *err= cJSON_GetObjectItem(theAns,"err");
+			cJSON *timeStamp= cJSON_GetObjectItem(theAns,"Ts");
+			cJSON *connmgr= cJSON_GetObjectItem(theAns,"connmgr");
+			cJSON *cmdHost= cJSON_GetObjectItem(theAns,"cmdHost");		//check if we got an order from Host
+			if(cmdHost)
+			{
+				memcpy(globalConn,connmgr->valuestring,strlen(connmgr->valuestring));
+				//launch Task to manage Cmds from host. It will kill itself
+				printf("FromHost [%s]\n",cmdHost->valuestring);
+				char *fromH=(char*)malloc(strlen(cmdHost->valuestring)+1);
+				bzero(fromH,strlen(cmdHost->valuestring)+1);
+				memcpy(fromH,cmdHost->valuestring,strlen(cmdHost->valuestring));
+				xTaskCreate(&cmdManager,"cmdmgr",9182,(void*)fromH, 10, NULL);		// in charge of saving meter activity to Fram
+			}
+			cJSON *tar= cJSON_GetObjectItem(theAns,"Tar");
+			if(tar)
+				loginData.theTariff=tar->valueint;
+			if(timeStamp)
+				loginData.thedate=(time_t)timeStamp->valueint;
+			if(rsyncf)
+			{
+				memcpy(theConf.lkey,syncKey,AESL);
+				theConf.lostSync+=0;
+				write_to_flash();
+				rsyncf=false;
+			}
+			cJSON_Delete(theAns);
+		}
+		free(ans);
 		sendErrors=0;		//restart counter on sucess
-		memcpy((void*)&loginData,ans,sizeof(loginData));
 		updateDateTime(loginData);
 	}
 	else
@@ -1116,40 +2007,25 @@ void sendStatusMeterAll()
 			{
 				pprintf("Errors exceeded. Restarting\n");
 				delay(1000);
+				if(gsock)
+				{
+					shutdown(gsock, 0);
+					close(gsock);
+					delay(1000);
+				}
 				esp_restart(); // hopefully it will connect
 			}
 		}
 	}
-//	printf("After aes %d\n",esp_get_free_heap_size());
-
-	if(lmessage)
-	{
-		free(lmessage);
-		lmessage=NULL;
-	}
-	if(ans)
-	{
-		free(ans);
-		ans=NULL;
-	}
-	if(donde)
-	{
-		free(donde);
-		donde=NULL;
-	}
-	if(output)
-	{
-		free(output);
-		output=NULL;
-	}
-	if(root)
-		cJSON_Delete(root);
 
 	if(theConf.traceflag & (1<<CMDD))
 	{
 		pprintf("%sSendMeterFram dates year %d month %d day %d hour %d Tariff %d\n",CMDDT,yearg,mesg,diag,horag,loginData.theTariff);
 		pprintf("%sTar %d sent Heap %d\n",CMDDT,loginData.theTariff,esp_get_free_heap_size());
 	}
+	if(theConf.traceflag & (1<<MSGD))
+		pprintf("%sSendAll %d\n",MSGDT,esp_get_free_heap_size());
+
 }
 
 static void erase_config() //do the dirty work
@@ -1213,66 +2089,36 @@ static void initScreen()
 }
 #endif
 
-bool decryptLogin(char* b64, uint16_t blen, char *decryp, size_t * fueron)
+
+static void init_fram( bool load)
 {
-	mbedtls_entropy_context entropy;
-	int ret;
-	size_t ilen=0;
+	// FRAM Setup. Will initialize the Semaphore. If NO FRAM, NO METER so it should really stop but for sakes of testing lets go on...
+	theGuard = esp_random();
+	framGuard=true;		//assume no FRAM, guard activated=true
 
-	char *encryp=malloc(1024);
-	ret=mbedtls_base64_decode(encryp,1024,&ilen,b64,blen);
-	if(ret!=0)
+	spi_flash_init();
+
+	framFlag=fram.begin(FMOSI,FMISO,FCLK,FCS,&framSem); //will create SPI channel and Semaphore
+	if(framFlag)
 	{
-		printf("Failed b64 %d\n",ret);
-		return false;
-	}
-
-	extern const unsigned char prvtkey_pem_start[] asm("_binary_prvtkey_pem_start");
-	extern const unsigned char prvtkey_pem_end[] asm("_binary_prvtkey_pem_end");
-	int len = prvtkey_pem_end - prvtkey_pem_start;
-
-	mbedtls_ctr_drbg_init(&ctr_drbg);
-	mbedtls_entropy_init(&entropy);
-	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
-	{
-		printf("failed seed %x\n",ret);
-		return false;
-	}
-
-	mbedtls_pk_init( &pk );
-
-	if( ( ret = mbedtls_pk_parse_key( &pk, prvtkey_pem_start,len,NULL,0)) != 0 )
-	{
-		    printf( " failed\n  ! mbedtls_pk_parse_private_keyfile returned -0x%04x\n", -ret );
-		    return false;
+		framGuard=false;						//fram is not dead
+		//load all devices counters from FRAM
+		startGuard=millis();
+		fram.write_guard(theGuard);				// theguard is dynamic and will change every boot.
+		if(load)
+			for (int a=0;a<MAXDEVS;a++)
+			{
+				if(theConf.traceflag & (1<<FRAMD))
+					pprintf("%sLoading %d\n",FRAMDT,a);
+				load_from_fram(a);
+			}
 	}
 	else
-	{
-	//	printf("Private Ok\n");
-		size_t aca;
-		if( ( ret = mbedtls_pk_decrypt( &pk, encryp, ilen,decryp, &aca,1024, mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
-		{
-		    printf( " failed  mbedtls_pk_decrypt returned -0x%04x\n", -ret );
-		    return false;
-
-		}
-		else
-		{
-		//	printf("Decrypted[%d] >%s<\n",aca,decryp);
-			*fueron=aca;
-		}
-		return true;
-	}
+		framSem=NULL;
 }
+
 static void init_vars()
 {
-	char * buf=malloc(1024);
-	char *result=malloc(1024);
-//	char to_encrypt[]="0123456789ABCDEFABCDEFGHIJKLMNOP";
-
-
-	size_t olen = 0;
-
 	qwait=QDELAY;
 	qdelay=qwait*1000;
 	sendTcp=waitQueue=500;
@@ -1287,8 +2133,12 @@ static void init_vars()
 	waitQueue=500;
 	sendErrors=0;
 
+	rsyncf=false;
+
 	if(theConf.sendDelay==0)
 		theConf.sendDelay=60000;
+
+	theConf.lostSync=0;
 
 	gpio_config_t io_conf;
 
@@ -1354,13 +2204,35 @@ static void init_vars()
 		strcpy(lookuptable[a+NKEYS/2],debugs.c_str());
 	}
 
+// Host Commands
+	strcpy((char*)&cmds[ 0].comando,"cmd_bpk");			cmds[0].code=setBPK;
+	strcpy((char*)&cmds[ 1].comando,"cmd_zerok");		cmds[1].code=zeroCmd;
+	strcpy((char*)&cmds[ 2].comando,"cmd_display");		cmds[2].code=displayCmd;
+	strcpy((char*)&cmds[ 3].comando,"cmd_setdelay");	cmds[3].code=setDelayCmd;
+	strcpy((char*)&cmds[ 4].comando,"cmd_sendmonth");	cmds[4].code=sendMonthCmd;
+	strcpy((char*)&cmds[ 5].comando,"cmd_sendmy");		cmds[5].code=sendMonthsInYearCmd;
+	strcpy((char*)&cmds[ 6].comando,"cmd_sendday");		cmds[6].code=sendDayCmd;
+	strcpy((char*)&cmds[ 7].comando,"cmd_senddy");		cmds[7].code=sendDaysInYearCmd;
+	strcpy((char*)&cmds[ 8].comando,"cmd_senddm");		cmds[8].code=sendDaysInMonthCmd;
+	strcpy((char*)&cmds[ 9].comando,"cmd_sendkwh");		cmds[9].code=sendKwHCmd;
+	strcpy((char*)&cmds[10].comando,"cmd_sendbeats");	cmds[10].code=sendBeatsCmd;
+
 	memset( iv, 0, sizeof( iv ) );
-	memset( key, 65, sizeof( key ) );
+	void *zb=malloc(AESL);
+	bzero(zb,AESL);
 
 	esp_aes_init( &ctx );
-	esp_aes_setkey( &ctx, key, 256 );
+	if(memcmp(zb,theConf.lkey,AESL)==0)
+	{
+		memset(&theConf.lkey,65,AESL);
+		write_to_flash();
+	}
+
+	//set AES key to saved key
+	esp_aes_setkey( &ctx, (const unsigned char*)theConf.lkey, 256 );
 
 
+	//setup the RSA system for Login and RSYNC cmds
 	mbedtls_entropy_context entropy;
 	int ret;
 	extern const unsigned char cacert_pem_start[] asm("_binary_public_pem_start");
@@ -1371,44 +2243,15 @@ static void init_vars()
 	mbedtls_entropy_init(&entropy);
 	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
 	{
-		printf("failed seed %x\n",ret);
-		return false;
+		pprintf("failed seed %x\n",ret);
+		return ;
 	}
 
 	mbedtls_pk_init( &pk );
 
 	if( ( ret = mbedtls_pk_parse_public_key( &pk,cacert_pem_start,len) ) != 0 )
-	    printf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
-	else
-	{
-		printf("Public Ok\n");
+	    pprintf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
 
-		/*
-		 * Calculate the RSA encryption of the data.
-		 */
-//		if( ( ret = mbedtls_pk_encrypt( &pk, to_encrypt, sizeof(to_encrypt),
-//		                                buf, &olen, 1024,
-//		                                mbedtls_ctr_drbg_random, &ctr_drbg ) ) != 0 )
-//		{
-//		    printf( " failed\n  ! mbedtls_pk_encrypt returned -0x%04x\n", -ret );
-//		}
-//		else
-//			printf("Encrypted len %d\n",olen);
-	}
-//	size_t fueron;
-//	size_t blen;
-//	char *b64=malloc(1000);
-//	ret=mbedtls_base64_encode(b64,1000,&blen,buf,olen);
-////	if(ret==0)
-////		printf("Base64[%d] %s\n",blen,b64);
-//
-////	if(decryptLogin(buf,olen,result,&fueron))
-//		if(decryptLogin(b64,blen,result,&fueron))
-//		printf("Decrypted[%d] [%s]\n",fueron,result);
-//	else
-//		printf("Failed to decrypt\n");
-	free(buf);
-	free(result);
 }
 
 static void check_boot_options()
@@ -1480,6 +2323,10 @@ void app_main()
 		pprintf("Read centinel %x not valid. Erasing Config\n",theConf.centinel);
 		erase_config();
 	}
+
+    string todos="12312312312";
+
+  //  commonResponse1(0,(char*)"DM",(char*)todos.c_str());
 
     init_vars();				// load initial vars
     wifi_init(); 				// start the wifi

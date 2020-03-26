@@ -6,7 +6,7 @@
 #include <bits/stdc++.h>
 
 #define KBDT		"\e[36m[KBD]\e[0m"
-#define MAXCMDSK	18
+#define MAXCMDSK	20
 
 extern void delay(uint32_t a);
 extern void write_to_flash();
@@ -396,14 +396,17 @@ void meterStatus(string ss)
 	}
 }
 
-void sendStatus(string ss)
+void sendDelay(string ss)
 {
 	cJSON *params=NULL;
 	int val=0;
+	char textl[40];
 
 	params=makeJson(ss);
-
-	val=askValue((char*)"Send Time(ms):",params);
+	sprintf(textl,"Send Time(%dms)",theConf.sendDelay);
+	val=askValue(textl,params);
+	if(val<0)
+		return;
 	theConf.sendDelay=val;
 	write_to_flash();
 
@@ -1019,6 +1022,47 @@ void showHelp(string ss)
 	printf("\n======CMDS======%s\n",RESETC);
 }
 
+static void zeroKeys(string ss)
+{
+	char s1[10];
+	int len;
+
+	printf("Reset Key sure?");
+	fflush(stdout);
+	len=get_string(UART_NUM_0,10,s1);
+	if(len<=0)
+		return;
+	memset(theConf.lkey,65,AESL);
+	write_to_flash();
+	esp_aes_setkey( &ctx, (unsigned char*)theConf.lkey, 256 );
+	printf("Keys erased\n");
+}
+
+static void cryptoOption(string ss)
+{
+	char s1[10];
+	int pos;
+
+	cJSON *params=makeJson(ss);
+
+	if(params)
+	{
+		cJSON *dly= cJSON_GetObjectItem(params,"MODE");
+		if(dly)
+			theConf.crypt=dly->valueint;
+		cJSON_Delete(params);
+	}
+	else
+	{
+		printf("%sCrypto(%d):%s",MAGENTA,theConf.crypt,RESETC);
+		fflush(stdout);
+		pos=get_string(UART_NUM_0,10,s1);
+		if(pos<0)
+			return;
+		theConf.crypt=atoi(s1);
+	}
+	write_to_flash();
+}
 void init_kbd_commands()
 {
 	strcpy((char*)&cmdds[0].comando,"Config");			cmdds[ 0].code=confStatus;			cmdds[0].help="SHORT";
@@ -1038,7 +1082,9 @@ void init_kbd_commands()
 	strcpy((char*)&cmdds[14].comando,"Help");			cmdds[14].code=showHelp;			cmdds[14].help="LONG";
 	strcpy((char*)&cmdds[15].comando,"Trace");			cmdds[15].code=traceFlags;			cmdds[15].help="NONE ALL BOOTD WIFID MQTTD PUBSUBD OTAD CMDD WEBD GEND MQTTT FRMCMD INTD FRAMD MSGD TIMED SIMD HOSTD";
 	strcpy((char*)&cmdds[16].comando,"FramMonthsAll");	cmdds[16].code=framMonths;			cmdds[16].help="METER";
-	strcpy((char*)&cmdds[17].comando,"Status");			cmdds[17].code=sendStatus;			cmdds[17].help="SENDSTAT";
+	strcpy((char*)&cmdds[17].comando,"StatusDelay");	cmdds[17].code=sendDelay;			cmdds[17].help="SENDDELAY";
+	strcpy((char*)&cmdds[18].comando,"ZeroK");			cmdds[18].code=zeroKeys;			cmdds[18].help="ZKeys";
+	strcpy((char*)&cmdds[19].comando,"Crypto");			cmdds[19].code=cryptoOption;		cmdds[18].help="SetCrypt";
 
 }
 
