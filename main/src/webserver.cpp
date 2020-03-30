@@ -71,10 +71,10 @@ static int reserveSlot(char *server, char* password)
 		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 		esp_wifi_start();
+		theConf.crypt=0;	//no encryuption now
 		EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, LOGIN_BIT, false, true, 100000/  portTICK_RATE_MS); //wait for IP to be assigned
 		if ((uxBits & LOGIN_BIT)==LOGIN_BIT)
 		q=sendMsg((uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ansmem,100);
-	//	printf("Reserve ans %d\n",q);
 		if(q<0)
 		{
 			if(ansmem)
@@ -84,7 +84,6 @@ static int reserveSlot(char *server, char* password)
 			return -1;
 		}
 		ans= *ansmem;
-	//	printf("Answer reserve %d\n",ans);
 		if(lmessage)
 			free(lmessage);
 		if(ansmem)
@@ -253,6 +252,9 @@ esp_err_t challenge_get_handler(httpd_req_t *req)
 
 				if (shaint==gotsha)
 				{
+					sprintf(tempb,"[%s]Meters were saved permanently. System restarting in a few seconds",strftime_buf);
+					httpd_resp_send(req, tempb, strlen(tempb));
+
 					memset(server,0,sizeof(server));
 					int fue=scan(server);
 					if(fue<0)
@@ -261,9 +263,6 @@ esp_err_t challenge_get_handler(httpd_req_t *req)
 						httpd_resp_send(req, tempb, strlen(tempb));
 						return ESP_OK;
 					}
-
-					sprintf(tempb,"[%s]Meters were saved permanently. Server %s System restarting in a few seconds",strftime_buf,server);
-					httpd_resp_send(req, tempb, strlen(tempb));
 
 					for (int a=0;a<MAXDEVS;a++)
 					{
@@ -295,10 +294,6 @@ esp_err_t challenge_get_handler(httpd_req_t *req)
 					int q=reserveSlot(server,server);
 				    if(theConf.traceflag & (1<<WEBD))
 				    	printf("%sWeb Reserve Answer %d\n",WEBDT,q);
-				//	sprintf(tempb,"[%s]Meters were saved permanently. Server %s Slot %d...system restarting",strftime_buf,server,q);
-				//	httpd_resp_send(req, tempb, strlen(tempb));
-				//	delay(2000);
-				//	esp_restart();
 				}
 				else
 					sprintf(tempb,"[%s]Invalid challenge",strftime_buf);
@@ -310,7 +305,7 @@ esp_err_t challenge_get_handler(httpd_req_t *req)
        }
 
 	httpd_resp_send(req, tempb, strlen(tempb));
-
+	esp_restart();
     return ESP_OK;
 }
 
@@ -382,25 +377,6 @@ exit:
 
     return ESP_OK;
 }
-
-//void web_init()
-//{
-//	for (int a=0;a<MAXURLS;a++)
-//	{
-//		urls[a].user_ctx=NULL;
-//		urls[a].method=HTTP_GET;
-//		switch(a)
-//		{
-//			case 0:
-//					strcpy(urls[a].uri,(const char*)"/setupend");
-//					urls[a].handler=setupend_get_handler;
-//					break;
-//			default:
-//				break;
-//		}
-//
-//	}
-//}
 
 void start_webserver(void *pArg)
 {

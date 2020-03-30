@@ -171,33 +171,38 @@ void timeKeeper(void *pArg)
 //	delay(faltan*QUE);
 	while(true)
 	{
-		delay(theConf.sendDelay);		//configuration delay
-		time(&now);
-		localtime_r(&now,&timep);
-		mesg=timep.tm_mon;   			// Global Month
-		diag=timep.tm_mday-1;    		// Global Day
-		yearg=timep.tm_year+1900;   	// Global Year
-		horag=timep.tm_hour;     		// Global Hour
-		yearDay=timep.tm_yday;
+		if(conn)
+		{
+			delay(theConf.sendDelay);		//configuration delay
+			time(&now);
+			localtime_r(&now,&timep);
+			mesg=timep.tm_mon;   			// Global Month
+			diag=timep.tm_mday-1;    		// Global Day
+			yearg=timep.tm_year+1900;   	// Global Year
+			horag=timep.tm_hour;     		// Global Hour
+			yearDay=timep.tm_yday;
 
-		if(theConf.traceflag & (1<<TIMED))
-			pprintf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d %s",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
-					timep.tm_min,timep.tm_sec,yearDay,ctime(&now));
+			if(theConf.traceflag & (1<<TIMED))
+				pprintf("%sHour change mes %d- %d day %d- %d hora %d- %d Min %d Sec %d dYear %d %s",TIEMPOT,mesg,oldMesg,diag,oldDiag,horag,oldHorag,
+						timep.tm_min,timep.tm_sec,yearDay,ctime(&now));
 
-		//if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
-		//	return;
-	//hours is a FACT that should change due to timer being fired every 1 hour
+			//if(horag==oldHorag && diag==oldDiag && mesg==oldMesg)
+			//	return;
+		//hours is a FACT that should change due to timer being fired every 1 hour
 
-	//	if(horag!=oldHorag) // hour change up or down
-	//		hourChange();
+		//	if(horag!=oldHorag) // hour change up or down
+		//		hourChange();
 
-		if(diag!=oldDiag) // day change up or down. Also hour MUST HAVE CHANGED before
-			dayChange();
+			if(diag!=oldDiag) // day change up or down. Also hour MUST HAVE CHANGED before
+				dayChange();
 
-		if(mesg!=oldMesg) // month change up or down. What to do with prev Year???? MONTH MUST HAVE CHANGED
-			monthChange();
+			if(mesg!=oldMesg) // month change up or down. What to do with prev Year???? MONTH MUST HAVE CHANGED
+				monthChange();
 
-		sendStatusMeterAll();
+			sendStatusMeterAll();
+			}
+		else
+			delay(1000);
 	}
 }
 
@@ -520,6 +525,7 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
         	if(theConf.traceflag & (1<<WIFID))
         		pprintf("%sChanged %d IP Assigned to MtM:" IPSTR,"\n",WIFIDT,ev->ip_changed, IP2STR(&ev->ip_info.ip));	//print it for testing purposes
             xEventGroupSetBits(wifi_event_group, WIFI_BIT);
+            conn=true;
             break;
         case IP_EVENT_STA_LOST_IP:
      //   	pprintf("MtM Lost Ip/n");
@@ -1263,11 +1269,14 @@ bool isnumber(char* data)
 	}
 	return true;
 }
-int sendReplyToHost(int cualm,int son,char* cmdI, ...)
+int sendReplyToHost(int cualm,int response,int son,char* cmdI, ...)
 {
 	va_list args;
+	time_t 	now;
+
+	time(&now);
+
 	va_start(args,cmdI);
-	printf("Sendreply\n");
 	cJSON *root=cJSON_CreateObject();
 
 	if(root)
@@ -1278,6 +1287,8 @@ int sendReplyToHost(int cualm,int son,char* cmdI, ...)
 			cJSON *cmdJ=cJSON_CreateObject();
 			if(cmdJ)
 			{
+				cJSON_AddNumberToObject			(cmdJ,"RSP",response);
+				cJSON_AddNumberToObject			(cmdJ,"TS",now);
 				cJSON_AddStringToObject			(cmdJ,"cmd","cmd_sendHost");
 				cJSON_AddStringToObject			(cmdJ,"MtM",theConf.meterName);
 				cJSON_AddStringToObject			(cmdJ,"MID",theConf.medidor_id[cualm]);
@@ -1305,7 +1316,6 @@ int sendReplyToHost(int cualm,int son,char* cmdI, ...)
 			if(lmessage)
 			{
 				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-	//			printf("Mensaje %s\n",lmessage);
 				free(lmessage);
 			}
 			cJSON_Delete(root);
@@ -1324,6 +1334,14 @@ int sendReplyToHost(int cualm,int son,char* cmdI, ...)
 int setBPK(cJSON *theJSON,uint8_t cualm)
 {
 	char numa[10],numb[10];
+
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
 
 	cJSON *bpk=cJSON_GetObjectItem(theJSON,"bpk");
 	cJSON *born=cJSON_GetObjectItem(theJSON,"born");
@@ -1349,7 +1367,7 @@ int setBPK(cJSON *theJSON,uint8_t cualm)
 
 	itoa(bpk->valueint,numa,10);
 	itoa(born->valueint,numb,10);
-	sendReplyToHost(cualm,1,(char*)"BPK",numa,"BORN",numb);
+	sendReplyToHost(cualm,response,2,(char*)"BPK",numa,"BORN",numb);
 	return ESP_OK;
 
 
@@ -1397,7 +1415,8 @@ int zeroCmd(cJSON *theJSON,uint8_t cualm)
 
 int displayCmd(cJSON *theJSON,uint8_t cualm)
 {
-	cJSON *dispmode=cJSON_GetObjectItem(theJSON,"mode");
+
+	cJSON *dispmode=cJSON_GetObjectItem(theJSON,"MODE");
 	if(dispmode)
 	{
 		int dis=dispmode->valueint;
@@ -1414,7 +1433,15 @@ int setDelayCmd(cJSON *theJSON,uint8_t cualm)
 {
 	char numa[10];
 
-	cJSON *delaym=cJSON_GetObjectItem(theJSON,"delay");
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
+
+	cJSON *delaym=cJSON_GetObjectItem(theJSON,"DELAY");
 	if(delaym)
 	{
 		theConf.sendDelay=delaym->valueint;
@@ -1424,7 +1451,7 @@ int setDelayCmd(cJSON *theJSON,uint8_t cualm)
 		return -1;
 
 	itoa(delaym->valueint,numa,10);
-	sendReplyToHost(cualm,1,(char*)"DELAYSET",numa);
+	sendReplyToHost(cualm,response,1,(char*)"DELAYSET",numa);
 	return ESP_OK;
 
 
@@ -1462,7 +1489,15 @@ int sendMonthCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theMonth;
 	char numa[10],numb[10];
 
-	cJSON *param=cJSON_GetObjectItem(theJSON,"month");
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
+
+	cJSON *param=cJSON_GetObjectItem(theJSON,"MONTH");
 	if(param)
 	{
 		fram.read_month(cualm,param->valueint,(uint8_t*)&theMonth);
@@ -1474,39 +1509,8 @@ int sendMonthCmd(cJSON *theJSON,uint8_t cualm)
 	itoa(param->valueint,numa,10);
 	itoa(theMonth,numb,10);
 	printf("Sending reply %s %s\n",numa,numb);
-	sendReplyToHost(cualm,2,(char*)"Month",(char*)numa,(char*)"KwH",(char*)numb);
+	sendReplyToHost(cualm,response,2,(char*)"Month",(char*)numa,(char*)"KwH",(char*)numb);
 	return ESP_OK;
-
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddNumberToObject			(cmdJ,"Month",param->valueint);
-//		cJSON_AddNumberToObject			(cmdJ,"KWH",theMonth);
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//		return ESP_OK;
-//	}
-//	else
-//		return -1;
 }
 
 int sendMonthsInYearCmd(cJSON *theJSON,uint8_t cualm)
@@ -1514,6 +1518,13 @@ int sendMonthsInYearCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theMonth[12];
 	char temp[10];
 	string todos="";
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
 
 	for(int a=0;a<12;a++)
 	{
@@ -1522,41 +1533,9 @@ int sendMonthsInYearCmd(cJSON *theJSON,uint8_t cualm)
 		sprintf(temp,"%d|",theMonth[a]);
 		todos+=string(temp);
 	}
-//	printf("\n Temp %s\n",todos.c_str());
 
-	sendReplyToHost(cualm,1,(char*)"MonthsKWH",(char*)todos.c_str());
+	sendReplyToHost(cualm,response,1,(char*)"MonthsKWH",(char*)todos.c_str());
 	return ESP_OK;
-
-//	cJSON *root=cJSON_CreateObject();
-//		if(root)
-//		{
-//			cJSON *ar = cJSON_CreateArray();
-//			cJSON *cmdJ=commonResponse(cualm);
-//			if(!cmdJ)
-//			{
-//				cJSON_Delete(root);
-//				return -1;
-//			}
-//
-//			double dmac						=(double)theMacNum;
-//
-//			cJSON_AddStringToObject			(cmdJ,"MonthsKWH",todos.c_str());
-//			cJSON_AddItemToArray			(ar, cmdJ);
-//			cJSON_AddItemToObject			(root,"Batch",ar);
-//			cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//			char *lmessage=cJSON_Print(root);
-//			if(lmessage)
-//			{
-//				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//				free(lmessage);
-//			}
-//			cJSON_Delete(root);
-//			todos="";
-//			return ESP_OK;
-//		}
-//		else
-//			return -1;
 }
 
 int sendDayCmd(cJSON *theJSON,uint8_t cualm)
@@ -1564,7 +1543,15 @@ int sendDayCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theDay;
 	char numa[10],numb[10];
 
-	cJSON *param=cJSON_GetObjectItem(theJSON,"day");
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
+
+	cJSON *param=cJSON_GetObjectItem(theJSON,"DAY");
 	if(param)
 	{
 		fram.read_day(cualm,(uint16_t)param->valueint,(uint8_t*)&theDay);
@@ -1575,38 +1562,9 @@ int sendDayCmd(cJSON *theJSON,uint8_t cualm)
 
 	itoa(param->valueint,numa,10);
 	itoa(theDay,numb,10);
-	sendReplyToHost(cualm,2,(char*)"Day",numa,"KwH",numb);
+	sendReplyToHost(cualm,response,2,(char*)"Day",numa,"KwH",numb);
 
 	return ESP_OK;
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddNumberToObject			(cmdJ,"Day",param->valueint);
-//		cJSON_AddNumberToObject			(cmdJ,"KwH",theDay);
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//		return ESP_OK;
-//	}
-//	return -1;
 }
 
 int sendKwHCmd(cJSON *theJSON,uint8_t cualm)
@@ -1614,40 +1572,19 @@ int sendKwHCmd(cJSON *theJSON,uint8_t cualm)
 	uint32_t kwh;
 	char numa[10];
 
-	fram.read_lifekwh(cualm,(uint8_t*)&kwh);
-//	printf("KwH[%d]=%d\n",cualm,kwh);
-	itoa(kwh,numa,10);
-	sendReplyToHost(cualm,1,(char*)"KwH",numa);
-	return ESP_OK;
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddNumberToObject			(cmdJ,"KwH",kwh);
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//		return ESP_OK;
-//	}
-//	return -1;
+	int response;
 
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
+
+	fram.read_lifekwh(cualm,(uint8_t*)&kwh);
+
+	itoa(kwh,numa,10);
+	sendReplyToHost(cualm,response,1,(char*)"KwH",numa);
+	return ESP_OK;
 }
 
 
@@ -1655,42 +1592,20 @@ int sendBeatsCmd(cJSON *theJSON,uint8_t cualm)
 {
 	uint32_t beats;
 	char numa[10];
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
 
 	fram.read_beat(cualm,(uint8_t*)&beats);
 //	printf("Beats[%d]=%d\n",cualm,beats);
 
 	itoa(beats,numa,10);
-	sendReplyToHost(cualm,1,(char*)"Beats",numa);
+	sendReplyToHost(cualm,response,1,(char*)"Beats",numa);
 	return ESP_OK;
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddNumberToObject			(cmdJ,"Beats",to_string(beats).c_str());
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//		return ESP_OK;
-//	}
-//		return -1;
-
 }
 
 int sendDaysInYearCmd(cJSON *theJSON,uint8_t cualm)
@@ -1698,6 +1613,13 @@ int sendDaysInYearCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theDay[366];
 	string todos="";
 	char temp[10];
+	int response;
+
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
 
 	for(int a=0;a<366;a++)
 	{
@@ -1707,39 +1629,8 @@ int sendDaysInYearCmd(cJSON *theJSON,uint8_t cualm)
 		todos+=string(temp);
 	}
 
-	sendReplyToHost(cualm,1,(char*)"DY",todos.c_str());
+	sendReplyToHost(cualm,response,1,(char*)"DY",todos.c_str());
 	return ESP_OK;
-
-//	printf("\n %s\n",todos.c_str());
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddStringToObject			(cmdJ,"DY",todos.c_str());
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//		return ESP_OK;
-//	}
-//	return -1;
-	todos="";
 }
 
 int sendDaysInMonthCmd(cJSON *theJSON,uint8_t cualm)
@@ -1747,8 +1638,15 @@ int sendDaysInMonthCmd(cJSON *theJSON,uint8_t cualm)
 	int desde=0,hasta;
 	string todos="";
 	char	temp[10];
+	int response;
 
-	cJSON *param=cJSON_GetObjectItem(theJSON,"month");
+	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
+	if(req)
+		response=req->valueint;
+	else
+		response=0;
+
+	cJSON *param=cJSON_GetObjectItem(theJSON,"MONTH");
 	if(param)
 	{//need to calculate first and last day
 		uint16_t theMonth;
@@ -1765,38 +1663,8 @@ int sendDaysInMonthCmd(cJSON *theJSON,uint8_t cualm)
 			}
 	//		printf("\n");
 
-		sendReplyToHost(cualm,1,(char*)"DM",todos.c_str());
+		sendReplyToHost(cualm,response,1,(char*)"DM",todos.c_str());
 		return ESP_OK;
-
-//		cJSON *root=cJSON_CreateObject();
-//		if(root)
-//		{
-//			cJSON *ar = cJSON_CreateArray();
-//			cJSON *cmdJ=commonResponse(cualm);
-//			if(!cmdJ)
-//			{
-//				cJSON_Delete(root);
-//				return -1;
-//			}
-//
-//			double dmac						=(double)theMacNum;
-//
-//			cJSON_AddStringToObject			(cmdJ,"DM",todos.c_str());
-//			cJSON_AddItemToArray			(ar, cmdJ);
-//			cJSON_AddItemToObject			(root,"Batch",ar);
-//			cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//			char *lmessage=cJSON_Print(root);
-//			if(lmessage)
-//			{
-//				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//				free(lmessage);
-//			}
-//			cJSON_Delete(root);
-//			return ESP_OK;
-//		}
-//			else
-//				return -1;
 	}
 	else
 		return -1;
@@ -1973,7 +1841,6 @@ void sendStatusMeterAll()
 			{
 				memcpy(globalConn,connmgr->valuestring,strlen(connmgr->valuestring));
 				//launch Task to manage Cmds from host. It will kill itself
-				printf("FromHost [%s]\n",cmdHost->valuestring);
 				char *fromH=(char*)malloc(strlen(cmdHost->valuestring)+1);
 				bzero(fromH,strlen(cmdHost->valuestring)+1);
 				memcpy(fromH,cmdHost->valuestring,strlen(cmdHost->valuestring));
