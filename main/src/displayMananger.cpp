@@ -156,7 +156,11 @@ void displayManager(void *arg) {
 			if(xSemaphoreTake(I2CSem, portMAX_DELAY))
 			{
 				drawString(0, 51, string(textd), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
-				drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+				drawString(86, 51, string(textt), 10, TEXT_ALIGN_LEFT,NODISPLAY, REPLACE);
+				if(framGuard)
+					drawString(60, 51, "FG", 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
+				else
+					drawString(60, 51, "OK", 10, TEXT_ALIGN_LEFT,DISPLAYIT, REPLACE);
 				if(displayMode==1)
 					displayBeats();
 				if(displayMode==2)

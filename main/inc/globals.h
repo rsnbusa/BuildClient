@@ -13,7 +13,8 @@
 using namespace std;
 
 EXTERN bool								conn,framFlag,framGuard,rsyncf;
-EXTERN char								lookuptable[NKEYS][10],deb,tempb[1200],theMac[20],them[6],TAG[20],challengeSHA[50],sharesult[32],rsnsha[10],syncKey[AESL],globalConn[20];
+EXTERN char								lookuptable[NKEYS][10],deb,*tempb,theMac[20],them[6],TAG[20],challengeSHA[50],sharesult[32],rsnsha[10],syncKey[AESL],globalConn[20],connserver[34],username[20],password[20];
+;
 EXTERN config_flash						theConf;
 EXTERN EventGroupHandle_t 				wifi_event_group;
 EXTERN FramSPI							fram;
@@ -25,7 +26,7 @@ EXTERN meterType						theMeters[MAXDEVS];
 EXTERN nvs_handle_t 					nvshandle;
 EXTERN QueueHandle_t 					mqttQ,mqttR,framQ,pcnt_evt_queue;
 EXTERN SemaphoreHandle_t 				wifiSem,framSem,I2CSem,printSem;
-EXTERN TaskHandle_t						webHandle,timeHandle,simHandle;
+EXTERN TaskHandle_t						webHandle,timeHandle,simHandle,connHandle;
 EXTERN u16                  			theGuard,diaHoraTarifa,yearDay,oldYearDay,llevoMsg,waitQueue,mesg,oldMesg,diag,oldDiag,horag,oldHorag,yearg,wDelay,qdelay,addressBytes;
 EXTERN u32								sentTotal,sendTcp,totalMsg[MAXDEVS],theMacNum,totalPulses,oldCurBeat[MAXDEVS],oldCurLife[MAXDEVS],startGuard;
 EXTERN u8								qwait,theBreakers[MAXDEVS],daysInMonth[12],lastalign,lastFont,workingDevs,nofram,sendErrors,iv[16],key[32];

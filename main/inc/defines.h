@@ -1,6 +1,9 @@
 #ifndef defines_h
 #define defines_h
 
+#define FREEANDNULL(x)					if(x) {free(x);x=NULL;}
+
+
 #define DISPLAY
 //#define HOST							//For Host Controller else MeterController
 //#define RECOVER						// If using Recover strategy. Not really worth it
@@ -9,7 +12,10 @@
 #define u16								uint16_t
 #define u8								uint8_t
 
-#define MAXCMDS							11
+#define AMPCONST220VC					4.167		//@240 VDC and PF=1 (perfect)
+#define THELOSS							10
+
+#define MAXCMDS							13			// Number of Cmds
 #define NKEYS							30
 #define	AESL							32
 #define BSIZE							1000
@@ -38,13 +44,13 @@
 #define MAXBUFF							10000
 
 #define METER0							4
-#define METER1							16 //22
-#define METER2							17
+#define METER1							25 //22
+#define METER2							26
 #define METER3							14
 #define METER4							13 //21
 
-#define BREAK0							13
-#define BREAK1							14
+#define BREAK0							21
+#define BREAK1							22
 #define BREAK2							25
 #define BREAK3							26
 #define BREAK4							27

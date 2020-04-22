@@ -27,7 +27,7 @@ void pprintf(const char * format, ...)
 			  vsprintf (mbuffer,format, args);
 			  printf(mbuffer);
 			  va_end (args);
-			  free(mbuffer);
+			  FREEANDNULL(mbuffer)
 		  }
 		  xSemaphoreGive(printSem);
 	}
@@ -51,6 +51,7 @@ void delay(uint32_t a)
 
 static void system_failure(char * title)
 {
+	return;
 	display.clear();
 	drawString(64,8,title,24,TEXT_ALIGN_CENTER,DISPLAYIT,NOREP);
 	while(true)
@@ -199,7 +200,7 @@ void timeKeeper(void *pArg)
 			if(mesg!=oldMesg) // month change up or down. What to do with prev Year???? MONTH MUST HAVE CHANGED
 				monthChange();
 
-			sendStatusMeterAll();
+				sendStatusMeterAll();
 			}
 		else
 			delay(1000);
@@ -226,6 +227,9 @@ static void pcntManager(void * pArg)
 		res = xQueueReceive(pcnt_evt_queue, (void*)&evt,portMAX_DELAY / portTICK_PERIOD_MS);
 		if (res == pdTRUE)
 		{
+			timeDiff=millis()-theMeters[evt.unit].ampTime;
+			theMeters[evt.unit].ampTime=millis();
+
 			pcnt_get_counter_value((pcnt_unit_t)evt.unit,(short int *) &count);
 			if(theConf.traceflag & (1<<INTD))
 				pprintf("%sEvent PCNT unit[%d]; cnt: %d status %x\n",INTDT, evt.unit, count,evt.status);
@@ -234,40 +238,55 @@ static void pcntManager(void * pArg)
 			{
 				pcnt_counter_clear((pcnt_unit_t)evt.unit);
 				totalPulses+=count;						//counter of all pulses received
-				theMeters[evt.unit].saveit=false;		//adding a new kwh flag
+				theMeters[evt.unit].saveit=false;
 				theMeters[evt.unit].currentBeat+=count;	//beat
 				theMeters[evt.unit].beatSave+=count;	//beats per kwh
 				theMeters[evt.unit].beatSaveRaw+=count;	//raw without tariff discount
-				if((theMeters[evt.unit].currentBeat % 10)!=0)
+				if((theMeters[evt.unit].currentBeat % THELOSS)!=0)
 				{
-					//force it to 10s. No idea how this happens but this is required else it will never have a Residuo of 0 and hence never inc kwh
+					//force it to THELOSS mod. No idea how this happens but this is required else it will never have a Residuo of 0 and hence never inc kwh
 					//shouldnt happen often I guess
-					float theFloat=theMeters[evt.unit].currentBeat/10;
-					int rounded=(int)round(theFloat)*10;
+					float theFloat=theMeters[evt.unit].currentBeat/THELOSS;
+					int rounded=(int)round(theFloat)*THELOSS;
 					theMeters[evt.unit].currentBeat=rounded;
-					theFloat=theMeters[evt.unit].beatSave/10;
-					rounded=(int)round(theFloat)*10;
-					theMeters[evt.unit].beatSave=rounded;
+					theMeters[evt.unit].beatSave=0;
 				}
+
+				// AMPs calculations
+				double amps = theMeters[evt.unit].ampBeats*AMPCONST220VC/(timeDiff/THELOSS);
+				uint16_t iAmps=(uint32_t)amps;	//to integer
+				if(iAmps>theMeters[evt.unit].maxamps)
+				{
+					time(&theMeters[evt.unit].minampsT);
+					theMeters[evt.unit].maxamps=iAmps;
+				}
+				if(iAmps<theMeters[evt.unit].minamps)
+				{
+					time(&theMeters[evt.unit].maxampsT);
+					theMeters[evt.unit].minamps=iAmps;
+				}
+
 				if(diaHoraTarifa==0)
 					diaHoraTarifa=100;					// should not happen but in case it does no crash
 
-				if(theMeters[evt.unit].beatsPerkW>0)	// div by 0 protection
+				residuo=1;
+				if(theMeters[evt.unit].beatsPerkW>0) // division 0 guard
 					residuo=theMeters[evt.unit].beatSave % (theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100);	//0 is 1 kwh happend with tariffs
-				else
-					residuo=1;
 
+				if(theMeters[evt.unit].beatSave>theMeters[evt.unit].beatsPerkW)
+				{
+					theMeters[evt.unit].beatSave=0;
+					residuo=0;
+				}
 				if(theConf.traceflag & (1<<INTD))
-					pprintf("%sResiduo %d Beat %d MeterPos %d Time %d BPK %d\n",INTDT,residuo,theMeters[evt.unit].currentBeat,
+					pprintf("%sBeatSave %d MeterPos %d Time %d BPK %d\n",INTDT,theMeters[evt.unit].beatSave,
 							theMeters[evt.unit].pos,timeDiff,theMeters[evt.unit].beatsPerkW);
 
 				if(residuo==0 && theMeters[evt.unit].currentBeat>0)
 				{
-					theMeters[evt.unit].saveit=true;	//add onw kwh
-					theMeters[evt.unit].beatSave-=theMeters[evt.unit].beatsPerkW*diaHoraTarifa/100;
+					theMeters[evt.unit].saveit=true;	//add one kwh
+					theMeters[evt.unit].beatSave=0;
 				}
-				else
-					theMeters[evt.unit].saveit=false;
 
 				if(framQ)
 				{
@@ -346,6 +365,19 @@ static void pcnt_init(void)
 	theMeters[3].pin=METER3;
 	theMeters[4].pin=METER4;
 
+	gpio_config_t io_conf;
+	io_conf.intr_type =			GPIO_INTR_DISABLE;
+	io_conf.mode =				GPIO_MODE_OUTPUT;
+	io_conf.pull_down_en =		GPIO_PULLDOWN_ENABLE;	//set to ground
+	io_conf.pull_up_en =		GPIO_PULLUP_DISABLE;
+
+	for (int a=0;a<MAXDEVS;a++)
+	{
+		io_conf.pin_bit_mask = 		(1ULL<<theMeters[a].pin);
+		gpio_config(&io_conf);
+		gpio_set_level((gpio_num_t)theMeters[a].pin, (theConf.breakOff & (1<<a)));
+	}
+
 	theMeters[0].pinB=BREAK0;
 	theMeters[1].pinB=BREAK1;
 	theMeters[2].pinB=BREAK2;
@@ -357,11 +389,17 @@ static void pcnt_init(void)
 
     for(int a=0;a<MAXDEVS;a++)
     	{
-    		if(theConf.beatsPerKw[a]>0 && theConf.configured[a]==3)  //Only Authenticated PINs and BPK setting > 0
+//		if(theConf.beatsPerKw[a]>0 && theConf.configured[a]==3)  //Only Authenticated PINs and BPK setting > 0
+    		if(theConf.beatsPerKw[a]>0 && theConf.configured[a])  //Only Authenticated PINs and BPK setting > 0
     		{
-    			theMeters[a].pos=a;
-    			pcnt_basic_init(a,10);	//grouped by 10 beats to save. Max loss is 10 beats in power failure
-    			workingDevs++;			//keep count of PCNT used
+
+    			theMeters[a].pos			=a;
+    			pcnt_basic_init(a,THELOSS);	//grouped by 10 beats to save. Max loss is 10 beats in power failure
+    			theMeters[a].ampBeats		=3600000/theConf.beatsPerKw[a];	//1 hour ms /beatsperKWH
+    			theMeters[a].ampTime		=millis();	//now
+    			theMeters[a].maxamps		=0;				//set it low
+    			theMeters[a].minamps		= 0xffff;	//set it high
+    			workingDevs++;				//keep count of PCNT used
     		}
     	}
 
@@ -422,63 +460,79 @@ void connect_to_host(void *pArg)
 	ip_addr_t 						remote;
 	u8 								aca[4];
 	tcpip_adapter_ip_info_t 		ip_info;
-	int addr_family;
-	int ip_protocol,err;
+	int 							addr_family;
+	int								ip_protocol,err,retry=0;
 
 	conn=false;
 	gsock=-1;
 
-	if(esp_wifi_connect()==ESP_OK)
+	while(true)
 	{
-		if(theConf.traceflag & (1<<MSGD))
-			pprintf("\n%sEstablish connect\n",MSGDT);
-		//wait for the Got IP handelr to set this bit
-		EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 10000/  portTICK_RATE_MS); //wait for IP to be assigned
-		if ((uxBits & WIFI_BIT)!=WIFI_BIT)
-			vTaskDelete(NULL);
-
-
-		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
-		//    		pprintf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
-		//    		pprintf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
-		//    		pprintf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
-		memcpy(&aca,&ip_info.gw,4);
-		IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
-
-		struct sockaddr_in dest_addr;
-		memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);	//send to our gateway, which is our server
-		dest_addr.sin_family = AF_INET;
-		dest_addr.sin_port = htons(BDGHOSTPORT);
-		addr_family = AF_INET;
-		ip_protocol = IPPROTO_IP;
-	 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
-
-		gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
-		if (gsock < 0) {
-			pprintf( "Unable to create socket: errno %d\n", errno);
-			vTaskDelete(NULL);
-
-		}
-		if(theConf.traceflag & (1<<MSGD))
-			pprintf("%sSocket %d created, connecting to %s:%d\n",MSGDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
-
-		err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-		if (err != 0)
+		again:
+		if(esp_wifi_connect()==ESP_OK)
 		{
-			if(theConf.traceflag & (1<<MSGD))
-				pprintf( "%sSocket unable to connect: errno %d\n",MSGDT, errno);
-			vTaskDelete(NULL);
+			if(theConf.traceflag & (1<<WIFID))
+				pprintf("%sRequesting connection\n",WIFIDT);
+			//wait for the Got IP handelr to set this bit
+			EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, WIFI_BIT, false, true, 3000/  portTICK_RATE_MS); //wait for IP to be assigned
+			if ((uxBits & WIFI_BIT)!=WIFI_BIT)
+			{
+	    		if(theConf.traceflag & (1<<WIFID))
+	    			pprintf("%sConnection timeout retry %d\n",WIFIDT,retry++);
+				goto again;
+			}
+
+			if(theConf.traceflag & (1<<WIFID))
+				pprintf("\n%sEstablished\n",WIFIDT);
+
+			ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
+			//    		pprintf("IP Address:  %s\n", ip4addr_ntoa(&ip_info.ip));
+			//    		pprintf("Subnet mask: %s\n", ip4addr_ntoa(&ip_info.netmask));
+			//    		pprintf("Gateway:     %s\n", ip4addr_ntoa(&ip_info.gw));
+			memcpy(&aca,&ip_info.gw,4);
+			IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
+
+			struct sockaddr_in dest_addr;
+			memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);	//send to our gateway, which is our server
+			dest_addr.sin_family = AF_INET;
+			dest_addr.sin_port = htons(BDGHOSTPORT);
+			addr_family = AF_INET;
+			ip_protocol = IPPROTO_IP;
+		 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
+
+			gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
+			if (gsock < 0) {
+				pprintf( "Unable to create socket: errno %d\n", errno);
+				connHandle=NULL;
+				vTaskDelete(NULL);
+
+			}
+			if(theConf.traceflag & (1<<WIFID))
+				pprintf("%sSocket %d created, connecting to %s:%d\n",WIFIDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
+
+			err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+			if (err != 0)
+			{
+				if(theConf.traceflag & (1<<WIFID))
+					pprintf( "%sSocket %d unable to connect: errno %d\n",WIFIDT,gsock, errno);
+				connHandle=NULL;
+				vTaskDelete(NULL);
+			}
+			conn=true;
+			gpio_set_level((gpio_num_t)WIFILED, 1);			//WIFILED on. We have a connection and a socket to host
+			xEventGroupSetBits(wifi_event_group, LOGIN_BIT);
 		}
-		conn=true;
-        gpio_set_level((gpio_num_t)WIFILED, 1);			//WIFILED on. We have a connection and a socket to host
-        xEventGroupSetBits(wifi_event_group, LOGIN_BIT);
+		else
+		{
+			if(theConf.traceflag & (1<<WIFID))
+				pprintf("%sCould not esp_connect\n",WIFIDT);
+			connHandle=NULL;
+		}
+		if(theConf.traceflag & (1<<WIFID))
+			pprintf("%sDone Connect to Host\n",WIFIDT);
+		connHandle=NULL;
+		vTaskDelete(NULL);
 	}
-    else
-    {
-		if(theConf.traceflag & (1<<MSGD))
-			pprintf("%sCould not esp_connect\n",MSGDT);
-    }
-	vTaskDelete(NULL);
 }
 
 void wifi_event_handler(void* arg, esp_event_base_t event_base,
@@ -486,26 +540,36 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base,
 {
     switch (event_id) {
     	case WIFI_EVENT_STA_START:
-    		xTaskCreate(&connect_to_host,"conn",4096,NULL, 4, NULL);
+    		if(theConf.traceflag & (1<<WIFID))
+    			pprintf("%sWifi start\n",WIFIDT);
+    		if(!connHandle)
+    			xTaskCreate(&connect_to_host,"conn",4096,NULL, 4, &connHandle);
         break;
     	case WIFI_EVENT_STA_STOP:
-    	//	pprintf("Wifi Stopped\n");
+    		if(theConf.traceflag & (1<<WIFID))
+    			pprintf("%sWifi Stopped\n",WIFIDT);
+    		conn=false;
+    		esp_wifi_start();
     		break;
         case WIFI_EVENT_STA_CONNECTED:
-    	//	printf("MtM Connected\n");
+    		if(theConf.traceflag & (1<<WIFID))
+    			printf("%sMtM Connected\n",WIFIDT);
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             break; //wait for ip
         case WIFI_EVENT_STA_DISCONNECTED:
-        //	printf("MtM Disconnected\n");
+    		if(theConf.traceflag & (1<<WIFID))
+    			printf("%sMtM Disconnected\n",WIFIDT);
             gpio_set_level((gpio_num_t)WIFILED, 0);
             xEventGroupClearBits(wifi_event_group, WIFI_BIT);
             if(gsock>0)
             {
+            	shutdown(gsock,0);
             	close(gsock);
             	gsock=-1;
             }
 			conn=false;
-            xTaskCreate(&connect_to_host,"conn",4096,NULL, 4, NULL);
+			if(!connHandle)	//just once CRITICAL
+				xTaskCreate(&connect_to_host,"conn",8192,NULL, 4, &connHandle);
             break;
         default:
 			if(theConf.traceflag & (1<<WIFID))
@@ -523,12 +587,13 @@ static void ip_event_handler(void* arg, esp_event_base_t event_base,
    switch (event_id) {
         case IP_EVENT_STA_GOT_IP:
         	if(theConf.traceflag & (1<<WIFID))
-        		pprintf("%sChanged %d IP Assigned to MtM:" IPSTR,"\n",WIFIDT,ev->ip_changed, IP2STR(&ev->ip_info.ip));	//print it for testing purposes
+        		pprintf("%sIP Assigned to MtM:" IPSTR,"\n",WIFIDT,IP2STR(&ev->ip_info.ip));	//print it for testing purposes
             xEventGroupSetBits(wifi_event_group, WIFI_BIT);
             conn=true;
             break;
         case IP_EVENT_STA_LOST_IP:
-     //   	pprintf("MtM Lost Ip/n");
+        	if(theConf.traceflag & (1<<WIFID))
+        		pprintf("%sMtM Lost Ip/n",WIFIDT);
         	break;
         default:
             break;
@@ -550,7 +615,8 @@ void write_to_fram(u8 meter,bool addit)
     }
 
     time(&timeH);
-
+	if(theConf.traceflag & (1<<FRAMD))
+			pprintf("%sFram Save %d\n",FRAMDT,addit);
 	if(addit)			// 1 kWh has occured for this Meter. Save it
 	{
 		theMeters[meter].curLife++;
@@ -613,7 +679,7 @@ void write_to_fram(u8 meter,bool addit)
 
 		}
 		if(theConf.traceflag & (1<<FRAMD))
-			pprintf("Beat[%d]=%d\n",meter,theMeters[meter].currentBeat);
+			pprintf("%sBeat[%d]=%d\n",FRAMDT,meter,theMeters[meter].currentBeat);
 
 		fram.write_beat(meter,theMeters[meter].currentBeat);
 		fram.writeMany(FRAMDATE,(uint8_t*)&timeH,sizeof(timeH));//last known date
@@ -629,113 +695,122 @@ void load_from_fram(u8 meter)
 		return;
     }
 
-	if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
-	{
-		fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
-		fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
-		fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
-		fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
-		fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
-		fram.read_day(meter, oldYearDay, (u8*)&theMeters[meter].curDay);
-		fram.read_dayraw(meter, oldYearDay, (u8*)&theMeters[meter].curDayRaw);
-	//	fram.read_hour(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHour);
-	//	fram.read_hourraw(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHourRaw);
-		totalPulses+=theMeters[meter].currentBeat;
-		if(theConf.beatsPerKw[meter]==0)
-			theConf.beatsPerKw[meter]=800;// just in case div by 0 crash
-		theMeters[meter].beatsPerkW=theConf.beatsPerKw[meter];// just in case div by 0 crash
-		u16 nada=theMeters[meter].currentBeat/theConf.beatsPerKw[meter];
-		theMeters[meter].beatSave=theMeters[meter].currentBeat-(nada*theConf.beatsPerKw[meter]);
-		theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
-		xSemaphoreGive(framSem);
+    if(framSem)
+    {
+		if(xSemaphoreTake(framSem, portMAX_DELAY/  portTICK_RATE_MS))
+		{
+			fram.read_beat(meter,(u8*)&theMeters[meter].currentBeat);
+			fram.read_lifekwh(meter,(u8*)&theMeters[meter].curLife);
+			fram.read_lifedate(meter,(u8*)&theMeters[meter].lastKwHDate);
+			fram.read_month(meter, mesg, (u8*)&theMeters[meter].curMonth);
+			fram.read_monthraw(meter, mesg, (u8*)&theMeters[meter].curMonthRaw);
+			fram.read_day(meter, oldYearDay, (u8*)&theMeters[meter].curDay);
+			fram.read_dayraw(meter, oldYearDay, (u8*)&theMeters[meter].curDayRaw);
+		//	fram.read_hour(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHour);
+		//	fram.read_hourraw(meter, oldYearDay, horag, (u8*)&theMeters[meter].curHourRaw);
+			totalPulses+=theMeters[meter].currentBeat;
+			if(theConf.beatsPerKw[meter]==0)
+				theConf.beatsPerKw[meter]=800;// just in case div by 0 crash
+			theMeters[meter].beatsPerkW=theConf.beatsPerKw[meter];// just in case div by 0 crash
+		//	load beatSave with the remainder of currentbeat mod beatsperkwh. This is for a crash/power out
+			theMeters[meter].beatSave=theMeters[meter].currentBeat % theConf.beatsPerKw[meter];
+			theMeters[meter].beatSaveRaw=theMeters[meter].beatSave;
+			xSemaphoreGive(framSem);
 
-		oldCurLife[meter]=0;//for display
-		oldCurLife[meter]=0;
+			oldCurLife[meter]=0;//for display
+			oldCurLife[meter]=0;
 
-		if(theConf.traceflag & (1<<FRAMD))
-			pprintf("[FRAMD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
-	}
+			if(theConf.traceflag & (1<<FRAMD))
+				printf("[FRAMD]Loaded Meter %d curLife %d beat %d\n",meter,theMeters[meter].curLife,theMeters[meter].currentBeat);
+		}
+    }
 }
 
 static void wifi_init(void)
 {
-	tcpip_adapter_ip_info_t 		ipInfo;
+    esp_netif_dns_info_t 			dnsInfo;
+    esp_netif_ip_info_t 			iipInfo;
 
 	if(theConf.traceflag & (1<<WIFID))
-		pprintf("%sWiFi Mode %s\n",WIFIDT,theConf.active?"RunConf":"SetupConf");
+		printf("%sWiFi Mode %s\n",WIFIDT,theConf.active?"RunConf":"SetupConf");
 
-	if(!theConf.active)
-	    tcpip_adapter_init();
-	else
-	    esp_netif_init();
+    esp_netif_init();
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
 	esp_efuse_mac_get_default((unsigned char*)them);
 
-    //if imperative to change default 192.168.4.1 to anything else use below. Careful with esp_net_if deprecation warnings
-	if(!theConf.active)	{
-		memset(&ipInfo,0,sizeof(ipInfo));
-		//set IP Address of AP for Stations DHCP
-		ESP_ERROR_CHECK(tcpip_adapter_dhcps_stop(TCPIP_ADAPTER_IF_AP));
-		IP4_ADDR(&ipInfo.ip, 192,168,19,1);
-		IP4_ADDR(&ipInfo.gw, 192,168,19,1);
-		IP4_ADDR(&ipInfo.netmask, 255,255,255,0);
-		ESP_ERROR_CHECK(tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_AP, &ipInfo));
-		ESP_ERROR_CHECK(tcpip_adapter_dhcps_start(TCPIP_ADAPTER_IF_AP));
-	}
-	    wifi_event_group = xEventGroupCreate();
-	    xEventGroupClearBits(wifi_event_group, WIFI_BIT);
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    //STA and AP defaults MUST be created even if not used
+    esp_netif_t* wifiSTA=esp_netif_create_default_wifi_sta();
+    esp_netif_t* wifiAP=esp_netif_create_default_wifi_ap();
 
-	    ESP_ERROR_CHECK(esp_event_loop_create_default());
-	    if(theConf.active)
-	    {
-	    	esp_netif_create_default_wifi_sta();
-	    	esp_netif_create_default_wifi_ap();
-	    }
+	IP4_ADDR(&iipInfo.ip, 192,168,19,1);
+	IP4_ADDR(&iipInfo.gw, 192,168,19,1);
+	IP4_ADDR(&iipInfo.netmask, 255,255,255,0);
+	esp_netif_dhcps_stop(wifiAP);
+	esp_netif_set_ip_info(wifiAP, &iipInfo);
+	esp_netif_dhcps_start(wifiAP);
+	inet_pton(AF_INET, "192.168.19.1", &dnsInfo.ip);
+	esp_netif_set_dns_info(wifiAP,	ESP_NETIF_DNS_MAIN,&dnsInfo);
 
-	    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
-	    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
+	wifi_event_group = xEventGroupCreate();
+	xEventGroupClearBits(wifi_event_group, WIFI_BIT);
 
-	    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-	    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-	    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+	ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+	ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
 
-	    wifi_config_t wifi_config;
-	    memset(&wifi_config,0,sizeof(wifi_config));//very important
-		if(theConf.active)
-	    {
-			if(strlen(theConf.mgrName)>0)
+
+
+	wifi_config_t wifi_config;
+	memset(&wifi_config,0,sizeof(wifi_config));//very important
+	if(theConf.active)
+	{
+		if(strlen(theConf.mgrName)>0)
+		{
+			strcpy((char*)wifi_config.sta.ssid,theConf.mgrName);
+			strcpy((char*)wifi_config.sta.password,theConf.mgrPass);
+			ESP_ERROR_CHECK(esp_wifi_set_mode(theConf.lock?WIFI_MODE_STA:WIFI_MODE_APSTA));
+			ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+			if(!theConf.lock)		//if we are locked, NO SETUP available. Must be unlocked by host
 			{
-				strcpy((char*)wifi_config.sta.ssid,theConf.mgrName);
-				strcpy((char*)wifi_config.sta.password,theConf.mgrPass);
-				ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-				ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-				ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
-				esp_wifi_start();
+				memset(&wifi_config,0,sizeof(wifi_config));//very important
+				sprintf(tempb,"Meter%02x%02x",them[4],them[5]);
+				strcpy((char*)wifi_config.ap.ssid,tempb);
+				strcpy((char*)wifi_config.ap.password,tempb);
+				wifi_config.ap.authmode=WIFI_AUTH_WPA_PSK;
+				wifi_config.ap.ssid_hidden=false;
+				wifi_config.ap.max_connection=1;
+				wifi_config.ap.ssid_len=0;
+				ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
 			}
-			else
-			{
-				pprintf("No Mgr defined\n");
-				theConf.active=false;
-				write_to_flash();
-				system_failure((char*)"NOWIFI");	//stop. Tell user need to configure MetrController by resetting and settin up
-			}
-	    }
-		else
-	    //AP section, we are in SetupMode
-	    {
-			sprintf(tempb,"Meter%02x%02x",them[4],them[5]);
-			strcpy((char*)wifi_config.ap.ssid,tempb);
-			strcpy((char*)wifi_config.ap.password,tempb);
-			wifi_config.ap.authmode=WIFI_AUTH_WPA_PSK;
-			wifi_config.ap.ssid_hidden=false;
-	//		wifi_config.ap.beacon_interval=400;
-			wifi_config.ap.max_connection=1;
-			wifi_config.ap.ssid_len=0;
-	//		wifi_config.ap.channel=1;
-			ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
-			ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
 			esp_wifi_start();
-	    }
+		}
+		else
+		{
+			printf("No Mgr defined\n");
+			theConf.active=false;
+			write_to_flash();
+			system_failure((char*)"NOWIFI");	//stop. Tell user need to configure MetrController by resetting and settin up
+		}
+	}
+	else
+	//AP section, we are in SetupMode
+	{
+		sprintf(tempb,"Meter%02x%02x",them[4],them[5]);
+		strcpy((char*)wifi_config.ap.ssid,tempb);
+		strcpy((char*)wifi_config.ap.password,tempb);
+		wifi_config.ap.authmode=WIFI_AUTH_WPA_PSK;
+		wifi_config.ap.ssid_hidden=false;
+		wifi_config.ap.max_connection=1;
+		wifi_config.ap.ssid_len=0;
+		ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+		esp_wifi_start();
+	}
 }
 
 static void updateDateTime(loginT loginData)
@@ -769,8 +844,12 @@ static void updateDateTime(loginT loginData)
 		}
 }
 
-static cJSON *makeCmdcJSON(meterType *meter,bool ans)
+static cJSON *makeCmdcJSON(int cual, meterType *meter,bool ans)
 {
+	short int count;
+
+	pcnt_get_counter_value((pcnt_unit_t)cual,(short int *) &count);
+
 	cJSON *cmdJ=cJSON_CreateObject();
 	if(cmdJ)
 	{
@@ -778,8 +857,10 @@ static cJSON *makeCmdcJSON(meterType *meter,bool ans)
 		cJSON_AddStringToObject(cmdJ,"mid",				theConf.medidor_id[meter->pos]);
 		cJSON_AddNumberToObject(cmdJ,"T#",				++theMeters[meter->pos].vanMqtt);// when affecting theMeter this pointer is to a COPY so get its pos and update directly
 		cJSON_AddNumberToObject(cmdJ,"KwH",				meter->curLife);
-		cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat);
+		cJSON_AddNumberToObject(cmdJ,"Beats",			meter->currentBeat+count);
 		cJSON_AddNumberToObject(cmdJ,"Pos",				meter->pos);
+		cJSON_AddNumberToObject(cmdJ,"minA",			meter->minamps);
+		cJSON_AddNumberToObject(cmdJ,"maxA",			meter->maxamps);
 		cJSON_AddBoolToObject(cmdJ,"reply",				ans);
 	}
 	return cmdJ;
@@ -809,14 +890,15 @@ static cJSON * makeGroupCmdAll()
 
 	for (int a=0;a<MAXDEVS;a++)
 	{
-		if(theConf.configured[a]==3)
+	//	if(theConf.configured[a]==3)
+			if(theConf.configured[a])
 		{
 			van++;
 			if(van==workingDevs)		//when sending group just answer to the last one
 				ans=true;
 			else
 				ans=false;
-			cJSON *cmdInt=makeCmdcJSON(&theMeters[a],ans);
+			cJSON *cmdInt=makeCmdcJSON(a,&theMeters[a],ans);
 			if(cmdInt)
 				cJSON_AddItemToArray(ar, cmdInt);
 		}
@@ -840,7 +922,7 @@ static cJSON * makeGroupCmdAll()
 			if(!b64)
 			{
 				pprintf("No RAM for b64\n");
-				free(nkey);
+				FREEANDNULL(nkey)
 				cJSON_Delete(root);
 				return NULL;
 			}
@@ -860,10 +942,8 @@ static cJSON * makeGroupCmdAll()
 		else
 			pprintf("No memory for key...incredibly low\n");
 
-		if(nkey)
-			free(nkey);
-		if(b64)
-			free(b64);
+		FREEANDNULL(nkey)
+		FREEANDNULL(b64)
 	}
 	return root;
 }
@@ -896,7 +976,7 @@ int aes_encrypt(const char* src, size_t son, char *dst)
 	if (!donde)
 	{
 		pprintf("No memory copy message\n");
-		return -1;
+		return ESP_FAIL;
 	}
 	bzero(donde,theSize);
 	memcpy(donde,src,son);
@@ -904,73 +984,17 @@ int aes_encrypt(const char* src, size_t son, char *dst)
 	bzero(iv,sizeof(iv));
 	esp_aes_setkey( &ctx,(const unsigned char*) theConf.lkey, 256 );			//key may be chanign on the Fly
 	esp_aes_crypt_cbc( &ctx, ESP_AES_ENCRYPT, theSize, (unsigned char*)iv,(const unsigned char*) donde,( unsigned char*) dst );
-	free(donde);
+	FREEANDNULL(donde)
 	return ESP_OK;
 }
-//
-//void connect_to_sock()
-//{
-//
-//	ip_addr_t 						remote;
-//	u8 								aca[4];
-//	tcpip_adapter_ip_info_t 		ip_info;
-//	int addr_family;
-//	int ip_protocol,err;
-//
-//	conn=false;
-//	gsock=-1;
-//
-//	if(esp_wifi_connect()==ESP_OK)
-//	{
-//
-//		ESP_ERROR_CHECK(tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ip_info));
-//		memcpy(&aca,&ip_info.gw,4);
-//		IP_ADDR4( &remote, aca[0],aca[1],aca[2],aca[3]);
-//
-//		struct sockaddr_in dest_addr;
-//		memcpy(&dest_addr.sin_addr.s_addr,&ip_info.gw,4);	//send to our gateway, which is our server
-//		dest_addr.sin_family = AF_INET;
-//		dest_addr.sin_port = htons(BDGHOSTPORT);
-//		addr_family = AF_INET;
-//		ip_protocol = IPPROTO_IP;
-//	 //   inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
-//
-//		gsock =  socket(addr_family, SOCK_STREAM, ip_protocol);
-//		if (gsock < 0) {
-//			pprintf( "Unable to create socket: errno %d\n", errno);
-//			return;
-//		}
-//	//	if(theConf.traceflag & (1<<MSGD))
-//			pprintf("%sSocket %d created, connecting to %s:%d\n",MSGDT,gsock, ip4addr_ntoa(&ip_info.gw), BDGHOSTPORT);
-//
-//		err = connect(gsock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-//		if (err != 0)
-//		{
-//	//		if(theConf.traceflag & (1<<MSGD))
-//				pprintf( "%sSocket unable to connect: errno %d\n",MSGDT, errno);
-//			return;
-//		}
-////		conn=true;
-//   //     gpio_set_level((gpio_num_t)WIFILED, 1);			//WIFILED on. We have a connection and a socket to host
-//   //    xEventGroupSetBits(wifi_event_group, LOGIN_BIT);
-//
-//	//	vTaskDelete(NULL);
-//	}
-//    else
-//    {
-//		if(theConf.traceflag & (1<<MSGD))
-//			pprintf("%sCould not esp_connect\n",MSGDT);
-//	//	vTaskDelete(NULL);
-//    }
-//	return;
-//}
 
-int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *rdonde,uint16_t maxx)
+int sendMsg(int cualSock,uint8_t *lmessage, uint16_t son,uint8_t *rdonde,uint16_t maxx)
 {
     struct timeval to;
 	int err,llen;
 
-//	connect_to_sock();
+	if (!conn)
+		return ESP_FAIL;
 
 	int theSize=son;
 	int rem= theSize % 16;
@@ -980,54 +1004,57 @@ int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *rdonde,uint16_t maxx)
 	if (!output)
 	{
 		pprintf("No memory ouput message\n");
-		return -1;
+		return ESP_FAIL;
 	}
 
 	if(theConf.traceflag & (1<<MSGD))
-		pprintf("%sSending queue size %d %s\n",MSGDT,son,lmessage);
+		pprintf("%sSending queue size %d %s %d\n",MSGDT,son,lmessage,esp_get_free_heap_size());
 
 	if(aes_encrypt((const char*)lmessage,son,output)!=0)
 	{
 		pprintf("Failed to encrypt SendMsg\n");
-		free(output);
-		return -1;
+		FREEANDNULL(output)
+		return ESP_FAIL;
 	}
-
-	err = send(gsock, output, theSize, 0);
+	err = send(cualSock, output, theSize, 0);
 	if (err < 0)
 	{
 		if(theConf.traceflag & (1<<MSGD))
 			pprintf( "%sSock %d Error occurred during sending: errno %d\n",MSGDT,gsock, errno);
-		free(output);
-		return -1;
+		FREEANDNULL(output)
+		return ESP_FAIL;
 	}
 
-	free(output);	//not needed anymore
+	FREEANDNULL(output)
 
 	 if(maxx>0)		//wait for reply
 	 {
+			if(theConf.traceflag & (1<<MSGD))
+				pprintf("%sWaiting response\n",MSGDT);
+
 		to.tv_sec = 2;
 		to.tv_usec = 0;
 
-		if (setsockopt(gsock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
+		if (setsockopt(cualSock,SOL_SOCKET,SO_RCVTIMEO,&to,sizeof(to)) < 0)
 		{
 			if(theConf.traceflag & (1<<MSGD))
 				pprintf("Unable to set read timeout on socket!\n");
-			return -1;
+			return ESP_FAIL;
 		}
 
 		char *response=(char*)malloc(maxx);
 		if(!response)
 		{
 			pprintf("Failed to get RAM for response\n");
-			return -1;
+			return ESP_FAIL;
 		}
 
-		llen = recv(gsock, response, maxx, 0);
+		llen = recv(cualSock, response, maxx, 0);
 
 		if(llen<0)
 		{
 			//timeout. Start counting lost Syncs.
+			pprintf("SendMsg Timeout %d\n",llen);
 			theConf.lostSync++;
 			if(theConf.lostSync>MAXLOSTSYNC)
 			{
@@ -1045,7 +1072,7 @@ int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *rdonde,uint16_t maxx)
 			aes_decrypt((const char*)response,llen,(char*)rdonde);
 			if(*rdonde!='{')		//start of any cJSON
 			{
-			//	pprintf("Not cJSON Client\n");
+				//pprintf("Not cJSON Client\n");
 				theConf.lostSync++;
 				if(theConf.lostSync>MAXLOSTSYNC-1)	//rsync,set default aes key
 				{
@@ -1057,14 +1084,14 @@ int sendMsg(uint8_t *lmessage, uint16_t son,uint8_t *rdonde,uint16_t maxx)
 			}
 		}
 
-		free(response);			// not needed anymore
+		FREEANDNULL(response)
 
 		if(theConf.traceflag & (1<<MSGD))
-			pprintf("%sSendmsg response size %d\n",MSGDT,llen);
+			pprintf("%sSendmsg response size %d heap %d\n",MSGDT,llen,esp_get_free_heap_size());
 
 		return llen;
 	 }
-	return 0;
+	return ESP_OK;
 }
 
 static int rsa_encrypt(char *nkey,size_t son,char *donde,size_t lenb)
@@ -1076,15 +1103,15 @@ static int rsa_encrypt(char *nkey,size_t son,char *donde,size_t lenb)
 	if(!buf)
 	{
 		printf("No RAM for buf\n");
-		return -1;
+		return ESP_FAIL;
 	}
 
 	// now encrypt the Key into the Buf buffer, olen has the final number of bytes
 	if((ret = mbedtls_pk_encrypt( &pk, (const unsigned char*)nkey, son,(unsigned char*)buf, (size_t*)&olen, 1024,mbedtls_ctr_drbg_random, &ctr_drbg)) != 0 )
 	{
 		printf( " failed\n  ! mbedtls_pk_encrypt returned -0x%04x\n", -ret );
-		free(buf);
-		return -1;
+		FREEANDNULL(buf)
+		return  ESP_FAIL;
 	}
 	size_t blen;
 
@@ -1093,11 +1120,10 @@ static int rsa_encrypt(char *nkey,size_t son,char *donde,size_t lenb)
 	if(ret)
 	{
 		printf("Failed to b64 ret %d\n",ret);
-		free(buf);
+		FREEANDNULL(buf)
 		return ret;
 	}
-	if(buf)
-		free(buf);
+	FREEANDNULL(buf)
 	return ESP_OK;
 }
 
@@ -1121,7 +1147,7 @@ static int logIn()
 	else
 	{
 		pprintf("No memory for key...incredibly low\n");
-		err=-1;
+		err= ESP_FAIL;
 		goto exit;
 	}
 
@@ -1156,6 +1182,15 @@ static int logIn()
 		goto exit;
 	}
 
+	if(ar==NULL)
+		goto exit;
+
+	if(cmdJ==NULL)
+	{
+		cJSON_Delete(ar);		//it hasnt been added to root so need to delete it directly
+		goto exit;
+	}
+
 	//create message password,cmd,aes key, mac# and array
 	dmac=(double)theMacNum;
 
@@ -1178,7 +1213,7 @@ static int logIn()
 	tmp=(char*)malloc(1024);
 	if(tmp)
 	{
-		int fueron=sendMsg((uint8_t*)logMsg,strlen(logMsg),(uint8_t*)tmp, 1024);		//send it encrypted
+		int fueron=sendMsg(gsock,(uint8_t*)logMsg,strlen(logMsg),(uint8_t*)tmp, 1024);		//send it encrypted
 		if(fueron>0)
 		{
 			//its a JSON struct parse it and get err and ts
@@ -1189,16 +1224,17 @@ static int logIn()
 				//got a good json
 				if(theConf.traceflag & (1<<MSGD))
 					pprintf("%sAnswer Login %s\n",MSGDT,tmp);
-			//	cJSON *err= 		cJSON_GetObjectItem(theAns,"err");
 				cJSON *timeStamp= 	cJSON_GetObjectItem(theAns,"Ts");
 				cJSON *tar= 		cJSON_GetObjectItem(theAns,"Tar");
 				if(tar)
 					loginData.theTariff=tar->valueint;
 				if(timeStamp)
 					loginData.thedate=(time_t)timeStamp->valueint;
+
+				cJSON_Delete(theAns);
 			}
 
-			if(rsa_status==ESP_OK) //must be done her so that SendMsg uses the Known key
+			if(rsa_status==ESP_OK) //must be done here so that SendMsg uses the Known key
 			{
 			//	printf("Login RSA\n");
 				memcpy(theConf.lkey,nkey,AESL);
@@ -1225,16 +1261,12 @@ static int logIn()
 
 	//free our people...
 	exit:
-	if(tmp)
-		free(tmp);
-	if(logMsg)
-		free(logMsg);
+	FREEANDNULL(tmp)
+	FREEANDNULL(logMsg)
+	FREEANDNULL(b64)
+	FREEANDNULL(nkey)
 	if(root)
 		cJSON_Delete(root);
-	if(b64)
-		free(b64);
-	if(nkey)
-		free(nkey);
 
 	return err;
 }
@@ -1244,21 +1276,9 @@ int findMeter(char*cualm)
 	for (int a=0;a<MAXDEVS;a++)
 		if(strcmp(theConf.medidor_id[a],cualm)==0)
 			return a;
-	return -1;
+	return  ESP_FAIL;
 }
 
-//cJSON *commonResponse(uint8_t cualm)
-//{
-//	cJSON *cmdJ=cJSON_CreateObject();
-//	if(cmdJ)
-//	{
-//		cJSON_AddStringToObject			(cmdJ,"cmd","cmd_sendHost");
-//		cJSON_AddStringToObject			(cmdJ,"MtM",theConf.meterName);
-//		cJSON_AddStringToObject			(cmdJ,"MID",theConf.medidor_id[cualm]);
-//		cJSON_AddStringToObject			(cmdJ,"connmgr",globalConn);
-//	}
-//	return cmdJ;
-//}
 
 bool isnumber(char* data)
 {
@@ -1269,7 +1289,7 @@ bool isnumber(char* data)
 	}
 	return true;
 }
-int sendReplyToHost(int cualm,int response,int son,char* cmdI, ...)
+int sendReplyToHost(int cualm,cJSON * cj,int son,char* cmdI, ...)
 {
 	va_list args;
 	time_t 	now;
@@ -1277,8 +1297,10 @@ int sendReplyToHost(int cualm,int response,int son,char* cmdI, ...)
 	time(&now);
 
 	va_start(args,cmdI);
-	cJSON *root=cJSON_CreateObject();
 
+	cJSON *req=cJSON_GetObjectItem(cj,"REQ");
+
+	cJSON *root=cJSON_CreateObject();
 	if(root)
 	{
 		cJSON *ar = cJSON_CreateArray();
@@ -1287,7 +1309,8 @@ int sendReplyToHost(int cualm,int response,int son,char* cmdI, ...)
 			cJSON *cmdJ=cJSON_CreateObject();
 			if(cmdJ)
 			{
-				cJSON_AddNumberToObject			(cmdJ,"RSP",response);
+				if(req)
+					cJSON_AddNumberToObject		(cmdJ,"RSP",req->valueint);
 				cJSON_AddNumberToObject			(cmdJ,"TS",now);
 				cJSON_AddStringToObject			(cmdJ,"cmd","cmd_sendHost");
 				cJSON_AddStringToObject			(cmdJ,"MtM",theConf.meterName);
@@ -1315,8 +1338,8 @@ int sendReplyToHost(int cualm,int response,int son,char* cmdI, ...)
 			char *lmessage=cJSON_Print(root);
 			if(lmessage)
 			{
-				sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-				free(lmessage);
+				sendMsg(gsock,(uint8_t*)lmessage,strlen(lmessage),NULL,0);
+				FREEANDNULL(lmessage)
 			}
 			cJSON_Delete(root);
 			return ESP_OK;
@@ -1335,21 +1358,13 @@ int setBPK(cJSON *theJSON,uint8_t cualm)
 {
 	char numa[10],numb[10];
 
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
-
 	cJSON *bpk=cJSON_GetObjectItem(theJSON,"bpk");
 	cJSON *born=cJSON_GetObjectItem(theJSON,"born");
 	if(!bpk || !born)
-		return -1;
+		return ESP_FAIL;
 
-	theConf.beatsPerKw[cualm]=bpk->valueint;	// beat per KW. MAGIC number.
-	theConf.bornKwh[cualm]=born->valueint;		// Initial KW in meter
+	theMeters[cualm].beatsPerkW=theConf.beatsPerKw[cualm]=bpk->valueint;	// beat per KW. MAGIC number.
+	theMeters[cualm].curLife=theConf.bornKwh[cualm]=born->valueint;		// Initial KW in meter
 	time(&theConf.bornDate[cualm]);				// save current date a birthday
 	write_to_flash();
 
@@ -1357,9 +1372,7 @@ int setBPK(cJSON *theJSON,uint8_t cualm)
 	fram.formatMeter(cualm);
 	fram.write_lifekwh(cualm,born->valueint);
 
-	theMeters[cualm].curLife=born->valueint;	//for display
-
-	theMeters[cualm].beatsPerkW=theMeters[cualm].curMonth=theMeters[cualm].curMonthRaw=theMeters[cualm].curDay=theMeters[cualm].curDayRaw=0;
+	theMeters[cualm].curMonth=theMeters[cualm].curMonthRaw=theMeters[cualm].curDay=theMeters[cualm].curDayRaw=0;
 	theMeters[cualm].curCycle=theMeters[cualm].currentBeat=theMeters[cualm].beatSave=theMeters[cualm].beatSaveRaw=0;
 	theMeters[cualm].curHour=theMeters[cualm].curHourRaw=0;
 
@@ -1367,40 +1380,24 @@ int setBPK(cJSON *theJSON,uint8_t cualm)
 
 	itoa(bpk->valueint,numa,10);
 	itoa(born->valueint,numb,10);
-	sendReplyToHost(cualm,response,2,(char*)"BPK",numa,"BORN",numb);
+	sendReplyToHost(cualm,theJSON,2,(char*)"BPK",numa,"BORN",numb);
 	return ESP_OK;
+}
 
 
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddNumberToObject			(cmdJ,"BPK",bpk->valueint);
-//		cJSON_AddNumberToObject			(cmdJ,"BORN",born->valueint);
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//		return ESP_OK;
-//	}
-//
-//	 return ESP_OK;
+int setLockCmd(cJSON *theJSON,uint8_t cualm)
+{
+	char numa[20];
+
+	cJSON *lck=cJSON_GetObjectItem(theJSON,"lock");
+	if(!lck)
+		return ESP_FAIL;
+
+	theConf.lock=lck->valueint;
+	write_to_flash();
+	itoa(lck->valueint,numa,10);
+	sendReplyToHost(cualm,theJSON,1,(char*)"LOCK",numa);
+	return ESP_OK;
 }
 
 
@@ -1425,7 +1422,7 @@ int displayCmd(cJSON *theJSON,uint8_t cualm)
 		displayMode=dis;
 	}
 	else
-		return -1;
+		return  ESP_FAIL;
 	return ESP_OK;
 }
 
@@ -1433,13 +1430,6 @@ int setDelayCmd(cJSON *theJSON,uint8_t cualm)
 {
 	char numa[10];
 
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
 
 	cJSON *delaym=cJSON_GetObjectItem(theJSON,"DELAY");
 	if(delaym)
@@ -1448,40 +1438,32 @@ int setDelayCmd(cJSON *theJSON,uint8_t cualm)
 		write_to_flash();
 	}
 	else
-		return -1;
+		return  ESP_FAIL;
 
 	itoa(delaym->valueint,numa,10);
-	sendReplyToHost(cualm,response,1,(char*)"DELAYSET",numa);
+	sendReplyToHost(cualm,theJSON,1,(char*)"DELAYSET",numa);
 	return ESP_OK;
+}
 
+int setOnOffCmd(cJSON *theJSON,uint8_t cualm)
+{
+	cJSON *delaym=cJSON_GetObjectItem(theJSON,"STATE");
+	if(delaym)
+	{
+		theConf.sendDelay=delaym->valueint;
+		if(cualm)
+			theConf.breakOff |= (1<<cualm);
+		else
+			theConf.breakOff &= ~(1<<cualm);
 
-//	cJSON *root=cJSON_CreateObject();
-//	if(root)
-//	{
-//		cJSON *ar = cJSON_CreateArray();
-//		cJSON *cmdJ=commonResponse(cualm);
-//		if(!cmdJ)
-//		{
-//			cJSON_Delete(root);
-//			return -1;
-//		}
-//
-//		double dmac						=(double)theMacNum;
-//
-//		cJSON_AddNumberToObject			(cmdJ,"DELAYSET",delaym->valueint);
-//		cJSON_AddItemToArray			(ar, cmdJ);
-//		cJSON_AddItemToObject			(root,"Batch",ar);
-//		cJSON_AddNumberToObject			(root,"macn",dmac);
-//
-//		char *lmessage=cJSON_Print(root);
-//		if(lmessage)
-//		{
-//			sendMsg((uint8_t*)lmessage,strlen(lmessage),NULL,0);
-//			free(lmessage);
-//		}
-//		cJSON_Delete(root);
-//	}
-//	return ESP_OK;
+		gpio_set_level((gpio_num_t)theMeters[cualm].pin, (theConf.breakOff & (1<<cualm)));
+		write_to_flash();
+	}
+	else
+		return  ESP_FAIL;
+
+	sendReplyToHost(cualm,theJSON,1,(char*)"ONOFF",delaym->valueint?"DISCO":"CONN");
+	return ESP_OK;
 }
 
 int sendMonthCmd(cJSON *theJSON,uint8_t cualm)
@@ -1489,27 +1471,16 @@ int sendMonthCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theMonth;
 	char numa[10],numb[10];
 
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
-
 	cJSON *param=cJSON_GetObjectItem(theJSON,"MONTH");
 	if(param)
-	{
 		fram.read_month(cualm,param->valueint,(uint8_t*)&theMonth);
-	//	printf("Month[%d]=%d\n",param->valueint,theMonth);
-	}
 	else
-		return -1;
+		return ESP_FAIL;
 
 	itoa(param->valueint,numa,10);
 	itoa(theMonth,numb,10);
 	printf("Sending reply %s %s\n",numa,numb);
-	sendReplyToHost(cualm,response,2,(char*)"Month",(char*)numa,(char*)"KwH",(char*)numb);
+	sendReplyToHost(cualm,theJSON,2,(char*)"Month",(char*)numa,(char*)"KwH",(char*)numb);
 	return ESP_OK;
 }
 
@@ -1518,13 +1489,6 @@ int sendMonthsInYearCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theMonth[12];
 	char temp[10];
 	string todos="";
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
 
 	for(int a=0;a<12;a++)
 	{
@@ -1534,7 +1498,7 @@ int sendMonthsInYearCmd(cJSON *theJSON,uint8_t cualm)
 		todos+=string(temp);
 	}
 
-	sendReplyToHost(cualm,response,1,(char*)"MonthsKWH",(char*)todos.c_str());
+	sendReplyToHost(cualm,theJSON,1,(char*)"MonthsKWH",(char*)todos.c_str());
 	return ESP_OK;
 }
 
@@ -1543,13 +1507,6 @@ int sendDayCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theDay;
 	char numa[10],numb[10];
 
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
 
 	cJSON *param=cJSON_GetObjectItem(theJSON,"DAY");
 	if(param)
@@ -1558,11 +1515,11 @@ int sendDayCmd(cJSON *theJSON,uint8_t cualm)
 	//	printf("Day[%d]=%d\n",param->valueint,theDay);
 	}
 	else
-		return -1;
+		return ESP_FAIL;
 
 	itoa(param->valueint,numa,10);
 	itoa(theDay,numb,10);
-	sendReplyToHost(cualm,response,2,(char*)"Day",numa,"KwH",numb);
+	sendReplyToHost(cualm,theJSON,2,(char*)"Day",numa,"KwH",numb);
 
 	return ESP_OK;
 }
@@ -1572,18 +1529,10 @@ int sendKwHCmd(cJSON *theJSON,uint8_t cualm)
 	uint32_t kwh;
 	char numa[10];
 
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
-
 	fram.read_lifekwh(cualm,(uint8_t*)&kwh);
 
 	itoa(kwh,numa,10);
-	sendReplyToHost(cualm,response,1,(char*)"KwH",numa);
+	sendReplyToHost(cualm,theJSON,1,(char*)"KwH",numa);
 	return ESP_OK;
 }
 
@@ -1592,19 +1541,12 @@ int sendBeatsCmd(cJSON *theJSON,uint8_t cualm)
 {
 	uint32_t beats;
 	char numa[10];
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
 
 	fram.read_beat(cualm,(uint8_t*)&beats);
 //	printf("Beats[%d]=%d\n",cualm,beats);
 
 	itoa(beats,numa,10);
-	sendReplyToHost(cualm,response,1,(char*)"Beats",numa);
+	sendReplyToHost(cualm,theJSON,1,(char*)"Beats",numa);
 	return ESP_OK;
 }
 
@@ -1613,13 +1555,6 @@ int sendDaysInYearCmd(cJSON *theJSON,uint8_t cualm)
 	uint16_t theDay[366];
 	string todos="";
 	char temp[10];
-	int response;
-
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
 
 	for(int a=0;a<366;a++)
 	{
@@ -1629,7 +1564,7 @@ int sendDaysInYearCmd(cJSON *theJSON,uint8_t cualm)
 		todos+=string(temp);
 	}
 
-	sendReplyToHost(cualm,response,1,(char*)"DY",todos.c_str());
+	sendReplyToHost(cualm,theJSON,1,(char*)"DY",todos.c_str());
 	return ESP_OK;
 }
 
@@ -1638,13 +1573,7 @@ int sendDaysInMonthCmd(cJSON *theJSON,uint8_t cualm)
 	int desde=0,hasta;
 	string todos="";
 	char	temp[10];
-	int response;
 
-	cJSON *req=cJSON_GetObjectItem(theJSON,"REQ");
-	if(req)
-		response=req->valueint;
-	else
-		response=0;
 
 	cJSON *param=cJSON_GetObjectItem(theJSON,"MONTH");
 	if(param)
@@ -1663,11 +1592,11 @@ int sendDaysInMonthCmd(cJSON *theJSON,uint8_t cualm)
 			}
 	//		printf("\n");
 
-		sendReplyToHost(cualm,response,1,(char*)"DM",todos.c_str());
+		sendReplyToHost(cualm,theJSON,1,(char*)"DM",todos.c_str());
 		return ESP_OK;
 	}
 	else
-		return -1;
+		return ESP_FAIL;
 }
 static int findCommand(char * cual)
 {
@@ -1676,7 +1605,7 @@ static int findCommand(char * cual)
 			if(strcmp(cmds[a].comando,cual)==0)
 			return a;
 	}
-	return -1;
+	return ESP_FAIL;
 }
 
 
@@ -1775,7 +1704,7 @@ void cmdManager(void *parg)
 		}
 		cJSON_Delete(elcmd);
 	}
-	free(cmd);
+	FREEANDNULL(cmd)
 	vTaskDelete(NULL);
 }
 
@@ -1785,9 +1714,9 @@ void sendStatusMeterAll()
     int 	sendStatus;
     char 	*lmessage=NULL,*ans=NULL;
 
-	if(theConf.traceflag & (1<<CMDD))
+	if(theConf.traceflag & (1<<MSGD))
 	{
-		pprintf("%sSendM %d Heap %d wait %d... ",CMDDT,++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
+		pprintf("%sSendM %d Heap %d wait %d\n",CMDDT,++sentTotal,esp_get_free_heap_size(),uxQueueMessagesWaiting(mqttR));
 		fflush(stdout);
 	}
 
@@ -1822,10 +1751,10 @@ void sendStatusMeterAll()
 
 	bzero(ans,1024);
 
-	sendStatus=sendMsg((uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ans,1024);
+	sendStatus=sendMsg(gsock,(uint8_t*)lmessage,strlen(lmessage),(uint8_t*)ans,1024);
 	if(sendStatus>=0)
 	{
-		free(lmessage);		//not needed any more
+		FREEANDNULL(lmessage)
 		//its a JSON struct parse it and get err and ts
 		cJSON *theAns= cJSON_Parse(ans);
 		if(theAns)
@@ -1833,7 +1762,6 @@ void sendStatusMeterAll()
 			//got a good json
 			if(theConf.traceflag & (1<<MSGD))
 				printf("%sAnswer %s\n",MSGDT,ans);
-	//		cJSON *err= cJSON_GetObjectItem(theAns,"err");
 			cJSON *timeStamp= cJSON_GetObjectItem(theAns,"Ts");
 			cJSON *connmgr= cJSON_GetObjectItem(theAns,"connmgr");
 			cJSON *cmdHost= cJSON_GetObjectItem(theAns,"cmdHost");		//check if we got an order from Host
@@ -1844,7 +1772,7 @@ void sendStatusMeterAll()
 				char *fromH=(char*)malloc(strlen(cmdHost->valuestring)+1);
 				bzero(fromH,strlen(cmdHost->valuestring)+1);
 				memcpy(fromH,cmdHost->valuestring,strlen(cmdHost->valuestring));
-				xTaskCreate(&cmdManager,"cmdmgr",9182,(void*)fromH, 10, NULL);		// in charge of saving meter activity to Fram
+				xTaskCreate(&cmdManager,"cmdmgr",9182,(void*)fromH, 10, NULL);		//task will free heap
 			}
 			cJSON *tar= cJSON_GetObjectItem(theAns,"Tar");
 			if(tar)
@@ -1860,12 +1788,14 @@ void sendStatusMeterAll()
 			}
 			cJSON_Delete(theAns);
 		}
-		free(ans);
+		FREEANDNULL(ans)
 		sendErrors=0;		//restart counter on sucess
 		updateDateTime(loginData);
 	}
 	else
 	{
+		FREEANDNULL(lmessage)
+		FREEANDNULL(ans)
 		//keep count of missed messages. If too many, restart
 		sendErrors++;
 		if(sendErrors>MAXSENDERR)
@@ -1874,12 +1804,13 @@ void sendStatusMeterAll()
 			{
 				pprintf("Errors exceeded. Restarting\n");
 				delay(1000);
-				if(gsock)
-				{
-					shutdown(gsock, 0);
-					close(gsock);
-					delay(1000);
-				}
+//				if(gsock)
+//				{
+//					shutdown(gsock, 0);
+//					close(gsock);
+//					delay(1000);
+//				}
+				printf("Restart conn\n");
 				esp_restart(); // hopefully it will connect
 			}
 		}
@@ -1900,6 +1831,7 @@ static void erase_config() //do the dirty work
 	memset(&theConf,0,sizeof(theConf));
 	theConf.centinel=CENTINEL;
 	theConf.beatsPerKw[0]=800;
+	theConf.crypt=1;
 	write_to_flash();
 	pprintf("Centinel %x\n",theConf.centinel);
 }
@@ -1952,7 +1884,7 @@ static void initScreen()
 		xSemaphoreGive(I2CSem);
 	}
 	else
-		pprintf("Failed to InitScreen\n");
+		printf("Failed to InitScreen\n");
 }
 #endif
 
@@ -1976,7 +1908,7 @@ static void init_fram( bool load)
 			for (int a=0;a<MAXDEVS;a++)
 			{
 				if(theConf.traceflag & (1<<FRAMD))
-					pprintf("%sLoading %d\n",FRAMDT,a);
+					printf("%sLoading %d\n",FRAMDT,a);
 				load_from_fram(a);
 			}
 	}
@@ -2001,6 +1933,9 @@ static void init_vars()
 	sendErrors=0;
 
 	rsyncf=false;
+	tempb=(char*)malloc(5000);
+	if(!tempb)
+		printf("Cannt Alloc Working Buffer\n");
 
 	if(theConf.sendDelay==0)
 		theConf.sendDelay=60000;
@@ -2036,15 +1971,15 @@ static void init_vars()
 
 	mqttQ = xQueueCreate( 20, sizeof( meterType ) );
 	if(!mqttQ)
-	pprintf("Failed queue Tx\n");
+		printf("Failed queue Tx\n");
 
 	mqttR = xQueueCreate( 20, sizeof( meterType ) );
 	if(!mqttR)
-	pprintf("Failed queue Rx\n");
+		printf("Failed queue Rx\n");
 
 	framQ = xQueueCreate( 20, sizeof( framMeterType ) );
 	if(!framQ)
-	pprintf("Failed queue Fram\n");
+		printf("Failed queue Fram\n");
 
 	strcpy(lookuptable[0],"BOOTD");
 	strcpy(lookuptable[1],"WIFID");
@@ -2083,6 +2018,8 @@ static void init_vars()
 	strcpy((char*)&cmds[ 8].comando,"cmd_senddm");		cmds[8].code=sendDaysInMonthCmd;
 	strcpy((char*)&cmds[ 9].comando,"cmd_sendkwh");		cmds[9].code=sendKwHCmd;
 	strcpy((char*)&cmds[10].comando,"cmd_sendbeats");	cmds[10].code=sendBeatsCmd;
+	strcpy((char*)&cmds[11].comando,"cmd_onOff");		cmds[11].code=setOnOffCmd;
+	strcpy((char*)&cmds[12].comando,"cmd_lock");		cmds[12].code=setLockCmd;
 
 	memset( iv, 0, sizeof( iv ) );
 	void *zb=malloc(AESL);
@@ -2110,14 +2047,14 @@ static void init_vars()
 	mbedtls_entropy_init(&entropy);
 	if((ret=mbedtls_ctr_drbg_seed(&ctr_drbg,mbedtls_entropy_func,&entropy,NULL,0))!=0)
 	{
-		pprintf("failed seed %x\n",ret);
+		printf("failed seed %x\n",ret);
 		return ;
 	}
 
 	mbedtls_pk_init( &pk );
 
 	if( ( ret = mbedtls_pk_parse_public_key( &pk,cacert_pem_start,len) ) != 0 )
-	    pprintf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
+	    printf( " failed\n  ! mbedtls_pk_parse_public_keyfile returned -0x%04x\n", -ret );
 
 }
 
@@ -2134,31 +2071,32 @@ static void check_boot_options()
 
 	if((theConf.traceflag & (1<<BOOTD)) )
 	{
-		pprintf("%s=============== FRAM ===============%s\n",RED,YELLOW);
-		pprintf("FRAMDATE(%s%d%s)=%s%d%s\n",GREEN,FRAMDATE,YELLOW,CYAN,METERVER-FRAMDATE,RESETC);
-		pprintf("METERVER(%s%d%s)=%s%d%s\n",GREEN,METERVER,YELLOW,CYAN,GUARDM-METERVER,RESETC);
-		pprintf("GUARD(%s%d%s)=%s%d%s\n",GREEN,GUARDM,YELLOW,CYAN,SCRATCH-GUARDM,RESETC);
-		pprintf("SCRATCH(%s%d%s)=%s%d%s\n",GREEN,SCRATCH,YELLOW,CYAN,SCRATCHEND-SCRATCH,RESETC);
-		pprintf("SCRATCHEND(%s%d%s)=%s%d%s\n",GREEN,SCRATCHEND,YELLOW,CYAN,TARIFADIA-SCRATCHEND,RESETC);
-		pprintf("TARIFADIA(%s%d%s)=%s%d%s\n",GREEN,TARIFADIA,YELLOW,CYAN,FINTARIFA-TARIFADIA,RESETC);
-		pprintf("FINTARIFA(%s%d%s)=%s%d%s\n",GREEN,FINTARIFA,YELLOW,CYAN,BEATSTART-FINTARIFA,RESETC);
-		pprintf("BEATSTART(%s%d%s)=%s%d%s\n",GREEN,BEATSTART,YELLOW,CYAN,LIFEKWH-BEATSTART,RESETC);
-		pprintf("LIFEKWH(%s%d%s)=%s%d%s\n",GREEN,LIFEKWH,YELLOW,CYAN,LIFEDATE-LIFEKWH,RESETC);
-		pprintf("LIFEDATE(%s%d%s)=%s%d%s\n",GREEN,LIFEDATE,YELLOW,CYAN,MONTHSTART-LIFEDATE,RESETC);
-		pprintf("MONTHSTART(%s%d%s)=%s%d%s\n",GREEN,MONTHSTART,YELLOW,CYAN,MONTHRAW-MONTHSTART,RESETC);
-		pprintf("MONTHRAW(%s%d%s)=%s%d%s\n",GREEN,MONTHRAW,YELLOW,CYAN,DAYSTART-MONTHRAW,RESETC);
-		pprintf("DAYSTART(%s%d%s)=%s%d%s\n",GREEN,DAYSTART,YELLOW,CYAN,DAYRAW-DAYSTART,RESETC);
-		pprintf("DAYRAW(%s%d%s)=%s%d%s\n",GREEN,DAYRAW,YELLOW,CYAN,HOURSTART-DAYRAW,RESETC);
-		pprintf("HOURSTART(%s%d%s)=%s%d%s\n",GREEN,HOURSTART,YELLOW,CYAN,HOURRAW-HOURSTART,RESETC);
-		pprintf("HOURRAW(%s%d%s)=%s%d%s\n",GREEN,HOURRAW,YELLOW,CYAN,DATAEND-HOURRAW,RESETC);
-		pprintf("DATAEND(%s%d%s)=%s%d%s\n",GREEN,DATAEND,YELLOW,CYAN,TOTALFRAM-DATAEND,RESETC);
-		pprintf("TOTALFRAM(%s%d%s)\n",GREEN,TOTALFRAM,RESETC);
-		pprintf("%s=============== FRAM ===============%s\n",RED,RESETC);
+		printf("%s=============== FRAM ===============%s\n",RED,YELLOW);
+		printf("FRAMDATE(%s%d%s)=%s%d%s\n",GREEN,FRAMDATE,YELLOW,CYAN,METERVER-FRAMDATE,RESETC);
+		printf("METERVER(%s%d%s)=%s%d%s\n",GREEN,METERVER,YELLOW,CYAN,GUARDM-METERVER,RESETC);
+		printf("GUARD(%s%d%s)=%s%d%s\n",GREEN,GUARDM,YELLOW,CYAN,SCRATCH-GUARDM,RESETC);
+		printf("SCRATCH(%s%d%s)=%s%d%s\n",GREEN,SCRATCH,YELLOW,CYAN,SCRATCHEND-SCRATCH,RESETC);
+		printf("SCRATCHEND(%s%d%s)=%s%d%s\n",GREEN,SCRATCHEND,YELLOW,CYAN,TARIFADIA-SCRATCHEND,RESETC);
+		printf("TARIFADIA(%s%d%s)=%s%d%s\n",GREEN,TARIFADIA,YELLOW,CYAN,FINTARIFA-TARIFADIA,RESETC);
+		printf("FINTARIFA(%s%d%s)=%s%d%s\n",GREEN,FINTARIFA,YELLOW,CYAN,BEATSTART-FINTARIFA,RESETC);
+		printf("BEATSTART(%s%d%s)=%s%d%s\n",GREEN,BEATSTART,YELLOW,CYAN,LIFEKWH-BEATSTART,RESETC);
+		printf("LIFEKWH(%s%d%s)=%s%d%s\n",GREEN,LIFEKWH,YELLOW,CYAN,LIFEDATE-LIFEKWH,RESETC);
+		printf("LIFEDATE(%s%d%s)=%s%d%s\n",GREEN,LIFEDATE,YELLOW,CYAN,MONTHSTART-LIFEDATE,RESETC);
+		printf("MONTHSTART(%s%d%s)=%s%d%s\n",GREEN,MONTHSTART,YELLOW,CYAN,MONTHRAW-MONTHSTART,RESETC);
+		printf("MONTHRAW(%s%d%s)=%s%d%s\n",GREEN,MONTHRAW,YELLOW,CYAN,DAYSTART-MONTHRAW,RESETC);
+		printf("DAYSTART(%s%d%s)=%s%d%s\n",GREEN,DAYSTART,YELLOW,CYAN,DAYRAW-DAYSTART,RESETC);
+		printf("DAYRAW(%s%d%s)=%s%d%s\n",GREEN,DAYRAW,YELLOW,CYAN,HOURSTART-DAYRAW,RESETC);
+		printf("HOURSTART(%s%d%s)=%s%d%s\n",GREEN,HOURSTART,YELLOW,CYAN,HOURRAW-HOURSTART,RESETC);
+		printf("HOURRAW(%s%d%s)=%s%d%s\n",GREEN,HOURRAW,YELLOW,CYAN,DATAEND-HOURRAW,RESETC);
+		printf("DATAEND(%s%d%s)=%s%d%s\n",GREEN,DATAEND,YELLOW,CYAN,TOTALFRAM-DATAEND,RESETC);
+		printf("TOTALFRAM(%s%d%s)\n",GREEN,TOTALFRAM,RESETC);
+		printf("%s=============== FRAM ===============%s\n",RED,RESETC);
 	}
 }
 
 void app_main()
 {
+	printf("MtM %u\n",esp_get_free_heap_size());
 
 	printSem= xSemaphoreCreateBinary();
 	xSemaphoreGive(printSem);
@@ -2166,7 +2104,7 @@ void app_main()
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES)
     {
-		pprintf("No free pages erased!!!!\n");
+		printf("No free pages erased!!!!\n");
 		ESP_ERROR_CHECK(nvs_flash_erase());
 		err = nvs_flash_init();
     }
@@ -2177,29 +2115,24 @@ void app_main()
 
 	if(theConf.traceflag & (1<<BOOTD))
 	{
-		pprintf("MeterIoT ConnManager\n");
-		pprintf("%sBuildMgr starting up\n",BOOTDT);
-		pprintf("%sFree memory: %d bytes\n", BOOTDT,esp_get_free_heap_size());
-		pprintf("%sIDF version: %s\n", BOOTDT,esp_get_idf_version());
+		printf("MeterIoT MtMManager\n");
+		printf("%sBuildMgr starting up\n",BOOTDT);
+		printf("%sFree memory: %d bytes\n", BOOTDT,esp_get_free_heap_size());
+		printf("%sIDF version: %s\n", BOOTDT,esp_get_idf_version());
 	}
 
 	delay(3000);//for erasing
 
     if (theConf.centinel!=CENTINEL || !gpio_get_level((gpio_num_t)0))
 	{
-		pprintf("Read centinel %x not valid. Erasing Config\n",theConf.centinel);
+		printf("Read centinel %x not valid. Erasing Config\n",theConf.centinel);
 		erase_config();
 	}
-
-    string todos="12312312312";
-
-  //  commonResponse1(0,(char*)"DM",(char*)todos.c_str());
 
     init_vars();				// load initial vars
     wifi_init(); 				// start the wifi
     init_fram(false);			// start the Fram Driver and load our Meters
     check_boot_options();		// see if we need to display boot stuff
-
 #ifdef DISPLAY
     initI2C();
     initScreen();
@@ -2215,16 +2148,19 @@ void app_main()
 		for (int a=0;a<MAXDEVS;a++)
 			load_from_fram(a);
 
-		xTaskCreate(&pcntManager,"pcntMgr",8192,NULL, 4, NULL);		// start the Pulse Manager task
+		xTaskCreate(&pcntManager,"pcntMgr",4096,NULL, 4, NULL);		// start the Pulse Manager task
 		pcnt_init();												// start receiving pulses
-		xTaskCreate(&framManager,"fmg",8192,NULL, 10, NULL);		// in charge of saving meter activity to Fram
+		xTaskCreate(&framManager,"fmg",4096,NULL, 10, NULL);		// in charge of saving meter activity to Fram
 		xTaskCreate(&timeKeeper,"tmK",4096,NULL, 10, &timeHandle);	// Due to Tariffs, we need to check hour,day and month changes
+		EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, LOGIN_BIT, false, true, 100000/  portTICK_RATE_MS); //wait for IP to be assigned
+		if ((uxBits & LOGIN_BIT)==LOGIN_BIT)
+			logIn();
 	}
-	else
-		xTaskCreate(&start_webserver,"web",10240,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager
+
+	xTaskCreate(&start_webserver,"web",10240,(void*)1, 10, &webHandle);// Messages from the Meters. Controller Section socket manager
 
 #ifdef DISPLAY
-		xTaskCreate(&displayManager,"8192",4096,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager
+		xTaskCreate(&displayManager,"displ",4096,(void*)1, 4, &webHandle);// Messages from the Meters. Controller Section socket manager
 #endif
 
 		theConf.lastResetCode=rtc_get_reset_reason(0);
@@ -2232,7 +2168,5 @@ void app_main()
 		theConf.bootcount++;
 		write_to_flash();
 
-		EventBits_t uxBits=xEventGroupWaitBits(wifi_event_group, LOGIN_BIT, false, true, 100000/  portTICK_RATE_MS); //wait for IP to be assigned
-		if ((uxBits & LOGIN_BIT)==LOGIN_BIT)
-			logIn();													//we are MeterControllers need to login to our Host Controller. For order purposes
+												//we are MeterControllers need to login to our Host Controller. For order purposes
 }
